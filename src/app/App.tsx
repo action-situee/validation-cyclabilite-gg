@@ -368,10 +368,13 @@ function AppInner() {
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#E5EEE6]">
       {/* Barre supérieure – brutalist */}
-      <div className="bg-white border-b-2 border-[#0a0a0a] px-4 py-2.5 flex items-center justify-between z-20 shrink-0">
-        <div className="flex items-center gap-4 min-w-0">
+      <div className="bg-white border-b-2 border-[#0a0a0a] px-4 py-2.5 flex items-center justify-between z-20 shrink-0 relative">
+        <div className="flex items-center gap-4 min-w-0 shrink-0 z-10">
           <Bike className="w-5 h-5 text-[#2E6A4A]" />
-          <div className="min-w-0">
+        </div>
+
+        <div className="absolute inset-x-0 flex justify-center px-16 sm:px-24 lg:px-40 pointer-events-none">
+          <div className="min-w-0 max-w-[34rem] text-center">
             <h1 className="text-[14px] leading-tight text-[#0a0a0a] uppercase tracking-[0.08em]">
               Validation de l&apos;indice de cyclabilite
             </h1>
@@ -381,7 +384,7 @@ function AppInner() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 z-10">
           <div
             className="flex items-center gap-0.5 rounded-full bg-[#DCE7DE] p-0.5"
             aria-label="Controle des sidebars"

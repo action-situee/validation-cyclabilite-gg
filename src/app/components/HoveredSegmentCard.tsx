@@ -30,6 +30,25 @@ export function HoveredSegmentCard({
   const [expandedClassKey, setExpandedClassKey] = useState<BikeMetricKey | null>(
     selectedMetric === 'bike_index' ? null : selectedMetric,
   );
+  const isCarreau = segment?.spatial_unit === 'carreau200';
+  const statusLabel =
+    source === 'selected'
+      ? isCarreau
+        ? 'Carreau survole'
+        : 'Segment selectionne'
+      : source === 'hover'
+        ? isCarreau
+          ? 'Carreau survole'
+          : 'Segment survole'
+        : 'Profil du segment';
+  const identifierLabel = segment?.segment_id
+    ? isCarreau
+      ? 'maille 200 m'
+      : segment.segment_id
+    : 'en attente';
+  const emptyStateLabel = isCarreau
+    ? 'Survolez un carreau ou un segment pour lire son profil et choisir la classe affichee sur la carte.'
+    : 'Survolez un segment pour lire son profil et choisir la classe affichee sur la carte.';
 
   useEffect(() => {
     setExpandedClassKey(selectedMetric === 'bike_index' ? null : selectedMetric);
@@ -82,19 +101,13 @@ export function HoveredSegmentCard({
     <div className="border-2 border-[#0a0a0a] bg-white">
       <div className="p-4 border-b border-[#e0e0dc] bg-[#E5EEE6]">
         <div className="flex items-center justify-between gap-3 mb-2">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#2E6A4A]">
-            {source === 'selected'
-              ? 'Segment selectionne'
-              : source === 'hover'
-                ? 'Segment survole'
-                : 'Profil du segment'}
-          </p>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[#2E6A4A]">{statusLabel}</p>
           <span className="text-[10px] text-[#999] font-mono">
-            {segment?.segment_id || 'en attente'}
+            {identifierLabel}
           </span>
         </div>
         <p className="text-[12px] text-[#0a0a0a] leading-relaxed">
-          {segment?.corridor_name || 'Survolez un segment pour lire son profil et choisir la classe affichee sur la carte.'}
+          {segment?.corridor_name || emptyStateLabel}
         </p>
         <button
           type="button"

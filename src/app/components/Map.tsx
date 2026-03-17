@@ -59,6 +59,8 @@ const DEFAULT_SWISS_IMAGERY_STYLE = 'https://vectortiles.geo.admin.ch/styles/ch.
 const DEFAULT_PERIMETER_PMTILES = '/tiles/canton_perimeter.pmtiles';
 const DEFAULT_PERIMETER_SOURCE_LAYER = 'canton_perimeter';
 const SEGMENT_DETAIL_ZOOM = 11;
+const SCALE_BLEND_START = 10.7;
+const SCALE_BLEND_END = 11.2;
 const LABEL_LAYER_PATTERN = /country|state|province|region|place|settlement|locality|commune|municipality|city|town|village|hamlet|admin|airport|airfield|aerodrome|aeroway/i;
 const ROUTE_NUMBER_LAYER_PATTERN = /shield|road[-_ ]?number|route[-_ ]?number|strassen[-_ ]?nummer|strassennummer|routenummer|highway[-_ ]?number|motorway[-_ ]?number|nationalstrasse|autobahn/i;
 const ROUTE_NUMBER_FIELD_PATTERN = /shield|road[-_ ]?number|route[-_ ]?number|strassen[-_ ]?nummer|strassennummer|routenummer|ref|nationalstrasse|autobahn/i;
@@ -224,14 +226,23 @@ function buildSelectedSegmentFromFeature(
   lat: number,
   faisceaux: Faisceau[],
   selectedFaisceau: string | null | undefined,
+  options?: {
+    fallbackId?: string;
+    spatialUnit?: BikeSegment['spatial_unit'];
+  },
 ): BikeSegment {
   const matchedFaisceau = findFaisceauForPoint([lng, lat], faisceaux, selectedFaisceau);
   const bikeIndex = getMetricValue(properties, 'bike_index');
+  const spatialUnit = options?.spatialUnit || 'segment';
+  const featureId =
+    String(properties.segment_id || properties.id || options?.fallbackId || '').trim() ||
+    `${spatialUnit}_${lat.toFixed(5)}_${lng.toFixed(5)}`;
 
   return {
-    segment_id: String(properties.segment_id || ''),
+    segment_id: featureId,
+    spatial_unit: spatialUnit,
     corridor_id: matchedFaisceau?.id || '',
-    corridor_name: matchedFaisceau?.nom || 'Grand Geneve',
+    corridor_name: matchedFaisceau?.nom || (spatialUnit === 'carreau200' ? 'Grand Geneve · carreau 200 m' : 'Grand Geneve'),
     corridor_color: matchedFaisceau?.color || '#2E6A4A',
     bike_index: bikeIndex,
     bike_index_class: getMetricClass(bikeIndex),
@@ -293,6 +304,7 @@ function bringPointLayersToFront(map: maplibregl.Map) {
   [
     'observations-halo',
     'observations-layer',
+    'cibles-shadow',
     'cibles-halo',
     'cibles-layer',
     'cibles-selected',
@@ -302,6 +314,38 @@ function bringPointLayersToFront(map: maplibregl.Map) {
 function getScaleForZoom(zoom: number, carreauAvailable = true): AnalysisScale {
   if (!carreauAvailable) return 'segment';
   return zoom > SEGMENT_DETAIL_ZOOM ? 'segment' : 'carreau200';
+}
+
+function buildSegmentScaleFadeExpression() {
+  return [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    6, 0,
+    8, 0,
+    10, 0,
+    SCALE_BLEND_START, 0,
+    SCALE_BLEND_END, 0.92,
+    15, 0.96,
+  ] as any;
+}
+
+function buildCarreauScaleFadeExpression(
+  lowZoomOpacity: number,
+  midZoomOpacity: number,
+  nearThresholdOpacity: number,
+) {
+  return [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    6, lowZoomOpacity,
+    8, midZoomOpacity,
+    10, nearThresholdOpacity,
+    SCALE_BLEND_START, nearThresholdOpacity,
+    SCALE_BLEND_END, 0,
+    12, 0,
+  ] as any;
 }
 
 function getLabelLayerIds(map: maplibregl.Map) {
@@ -562,7 +606,7 @@ function setPerimeterVisibility(map: maplibregl.Map, visible: boolean) {
     map.setPaintProperty(
       'perimeter-outline',
       'line-opacity',
-      visible ? ['interpolate', ['linear'], ['zoom'], 8, 0.18, 10, 0.32, 12, 0.62, 14, 0.92] : 0,
+      visible ? ['interpolate', ['linear'], ['zoom'], 6, 0.92, 8, 0.94, 10, 0.96, 12, 0.98, 14, 1] : 0,
     );
   }
   map.triggerRepaint();
@@ -583,36 +627,6 @@ function reorderMapLayers(map: maplibregl.Map) {
   ].forEach((layerId) => moveLayerToTop(map, layerId));
   moveLabelLayersToTop(map);
   bringPointLayersToFront(map);
-}
-
-function styleScaleControl(host: HTMLDivElement | null, container: HTMLDivElement | null) {
-  const scaleElement = container?.querySelector('.mapboxgl-ctrl-scale, .maplibregl-ctrl-scale') as HTMLElement | null;
-  const scaleWrapper = scaleElement?.parentElement as HTMLElement | null;
-
-  if (!host || !scaleElement || !scaleWrapper) return;
-
-  if (!host.contains(scaleWrapper)) {
-    host.replaceChildren(scaleWrapper);
-  }
-
-  scaleWrapper.style.margin = '0';
-  scaleWrapper.style.display = 'flex';
-  scaleWrapper.style.alignItems = 'center';
-  scaleWrapper.style.pointerEvents = 'none';
-
-  scaleElement.style.background = 'transparent';
-  scaleElement.style.border = 'none';
-  scaleElement.style.borderBottom = '1.5px solid #111111';
-  scaleElement.style.borderRadius = '0';
-  scaleElement.style.boxShadow = 'none';
-  scaleElement.style.color = '#1A1A1A';
-  scaleElement.style.fontFamily = 'Arial, sans-serif';
-  scaleElement.style.fontSize = '10px';
-  scaleElement.style.fontWeight = '600';
-  scaleElement.style.letterSpacing = '0.04em';
-  scaleElement.style.padding = '0 0 2px 0';
-  scaleElement.style.minWidth = 'unset';
-  scaleElement.style.textAlign = 'center';
 }
 
 function waitForStyleReady(map: maplibregl.Map, onReady: () => void) {
@@ -675,7 +689,6 @@ function MapInner({
   sidebarLayout = 'none-none',
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const scaleHostRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const protocolRef = useRef<Protocol | null>(null);
   const hoveredSegmentIdRef = useRef<string | null>(null);
@@ -829,13 +842,13 @@ function MapInner({
   };
 
   const applyScaleVisibility = (map: maplibregl.Map, nextScale = displayScaleRef.current) => {
-    const effectiveScale =
-      nextScale === 'carreau200' && map.getLayer('carreau200-fill') ? 'carreau200' : 'segment';
+    const hasCarreauLayer = Boolean(map.getLayer('carreau200-fill'));
+    const effectiveScale = nextScale === 'carreau200' && hasCarreauLayer ? 'carreau200' : 'segment';
     const showSegmentInteractions = effectiveScale === 'segment' || addModeRef.current;
 
-    setLayerVisibility(map, 'segments-layer', effectiveScale === 'segment');
-    setLayerVisibility(map, 'carreau200-fill', effectiveScale === 'carreau200');
-    setLayerVisibility(map, 'carreau200-outline', effectiveScale === 'carreau200');
+    setLayerVisibility(map, 'segments-layer', true);
+    setLayerVisibility(map, 'carreau200-fill', hasCarreauLayer);
+    setLayerVisibility(map, 'carreau200-outline', hasCarreauLayer);
     setLayerVisibility(map, 'segments-hit-area', showSegmentInteractions);
     setLayerVisibility(map, 'segments-selected-halo', Boolean(selectedSegmentRef.current));
     setLayerVisibility(map, 'segments-selected', Boolean(selectedSegmentRef.current));
@@ -881,7 +894,7 @@ function MapInner({
             BIKE_METRIC_BY_KEY[selectedMetricRef.current].field,
             metricThresholdsRef.current,
           ) as any,
-          'line-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0.78, 8, 0.86, 11, 0.92, 15, 0.96],
+          'line-opacity': buildSegmentScaleFadeExpression(),
         },
       });
     }
@@ -897,7 +910,7 @@ function MapInner({
             BIKE_METRIC_BY_KEY[selectedMetricRef.current].field,
             metricThresholdsRef.current,
           ) as any,
-          'fill-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0.72, 8, 0.78, 10, 0.82, 11, 0.86],
+          'fill-opacity': buildCarreauScaleFadeExpression(0.72, 0.78, 0.84),
           'fill-antialias': true,
         },
         layout: {
@@ -915,7 +928,7 @@ function MapInner({
         paint: {
           'line-color': 'rgba(17, 17, 17, 0.28)',
           'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.25, 8, 0.3, 10, 0.36, 11, 0.42],
-          'line-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0.16, 8, 0.22, 10, 0.28, 11, 0.34],
+          'line-opacity': buildCarreauScaleFadeExpression(0.16, 0.22, 0.3),
         },
         layout: {
           visibility: 'none',
@@ -1050,15 +1063,29 @@ function MapInner({
       });
     }
 
+    if (!map.getLayer('cibles-shadow')) {
+      map.addLayer({
+        id: 'cibles-shadow',
+        type: 'circle',
+        source: 'cibles',
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 9.5, 10, 11.5, 13, 14.5],
+          'circle-color': '#111111',
+          'circle-opacity': 0.36,
+          'circle-blur': 0.2,
+        },
+      });
+    }
+
     if (!map.getLayer('cibles-halo')) {
       map.addLayer({
         id: 'cibles-halo',
         type: 'circle',
         source: 'cibles',
         paint: {
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 8.6, 11, 11.2, 14, 13.8],
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 8.2, 10, 9.5, 13, 11.8],
           'circle-color': '#ffffff',
-          'circle-opacity': 0.95,
+          'circle-opacity': 0.98,
         },
       });
     }
@@ -1069,9 +1096,9 @@ function MapInner({
         type: 'circle',
         source: 'cibles',
         paint: {
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 6.2, 11, 7.8, 14, 9.8],
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 5.2, 10, 6.2, 13, 7.6],
           'circle-color': ['coalesce', ['get', 'markerColor'], '#2E6A4A'],
-          'circle-stroke-width': 2.1,
+          'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 7, 1.6, 10, 1.9, 13, 2.2],
           'circle-stroke-color': '#0a0a0a',
           'circle-opacity': 1,
         },
@@ -1085,10 +1112,10 @@ function MapInner({
         source: 'cibles',
         filter: ['==', ['get', 'id'], ''],
         paint: {
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 8, 11, 10.5, 14, 13],
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 8.6, 10, 10.5, 13, 13.4],
           'circle-color': 'rgba(255,255,255,0)',
-          'circle-stroke-width': 3,
-          'circle-stroke-color': '#0a0a0a',
+          'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 7, 2.4, 10, 3, 13, 3.4],
+          'circle-stroke-color': '#FFD60A',
           'circle-opacity': 1,
         },
       });
@@ -1128,9 +1155,8 @@ function MapInner({
             'source-layer': PERIMETER_SOURCE_LAYER,
             paint: {
               'line-color': '#000000',
-              'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1.2, 10, 1.8, 12, 2.4, 14, 3],
-              'line-dasharray': [0, 2.2],
-              'line-opacity': showPerimeterRef.current ? ['interpolate', ['linear'], ['zoom'], 8, 0.18, 10, 0.32, 12, 0.62, 14, 0.92] : 0,
+              'line-width': ['interpolate', ['linear'], ['zoom'], 6, 2.8, 8, 3.1, 10, 3.4, 12, 3.8, 14, 4.4],
+              'line-opacity': showPerimeterRef.current ? ['interpolate', ['linear'], ['zoom'], 6, 0.92, 8, 0.94, 10, 0.96, 12, 0.98, 14, 1] : 0,
             },
             layout: {
               visibility: 'visible',
@@ -1191,16 +1217,6 @@ function MapInner({
         compact: true,
       });
       map.addControl(attributionControl, 'bottom-right');
-
-      const scaleControl = new maplibregl.ScaleControl({
-        maxWidth: 120,
-        unit: 'metric',
-      });
-      map.addControl(scaleControl, 'bottom-left');
-
-      requestAnimationFrame(() => {
-        styleScaleControl(scaleHostRef.current, containerRef.current);
-      });
 
       const queueCameraSync = () => {
         if (cameraAnimationFrameRef.current !== null) return;
@@ -1312,29 +1328,28 @@ function MapInner({
           return;
         }
 
-        if (displayScaleRef.current !== 'segment') {
-          if (hoveredSegmentIdRef.current !== null) {
-            hoveredSegmentIdRef.current = null;
-            onHoverSegmentRef.current(null);
-          }
-          map.getCanvas().style.cursor = addModeRef.current ? 'crosshair' : '';
-          return;
-        }
-
-        const segmentFeature = queryLayerFeature(event.point, 'segments-hit-area');
-        if (segmentFeature?.properties) {
-          const nextSegmentId = String(segmentFeature.properties.segment_id || '');
+        const hoveredAnalysisLayerId =
+          displayScaleRef.current === 'segment' ? 'segments-hit-area' : 'carreau200-fill';
+        const hoveredFeature = queryLayerFeature(event.point, hoveredAnalysisLayerId);
+        if (hoveredFeature?.properties) {
+          const nextSegmentId =
+            String(hoveredFeature.properties.segment_id || hoveredFeature.properties.id || hoveredFeature.id || '') ||
+            `${displayScaleRef.current}_${event.lngLat.lat.toFixed(5)}_${event.lngLat.lng.toFixed(5)}`;
           map.getCanvas().style.cursor = 'pointer';
           if (hoveredSegmentIdRef.current === nextSegmentId) return;
 
           hoveredSegmentIdRef.current = nextSegmentId;
           onHoverSegmentRef.current(
             buildSelectedSegmentFromFeature(
-              segmentFeature.properties as Record<string, unknown>,
+              hoveredFeature.properties as Record<string, unknown>,
               event.lngLat.lng,
               event.lngLat.lat,
               faisceauxRef.current,
               selectedFaisceauRef.current,
+              {
+                fallbackId: String(hoveredFeature.id || hoveredFeature.properties.id || ''),
+                spatialUnit: displayScaleRef.current,
+              },
             ),
           );
           return;
@@ -1453,9 +1468,6 @@ function MapInner({
         try {
           ensureMapSourcesAndLayers(map);
           syncCameraState(map);
-          requestAnimationFrame(() => {
-            styleScaleControl(scaleHostRef.current, containerRef.current);
-          });
           setMapReady(true);
           setMapError(false);
         } catch (error) {
@@ -1591,7 +1603,6 @@ function MapInner({
     if (!mapReady || !mapRef.current) return;
     const timer = setTimeout(() => {
       mapRef.current?.resize();
-      styleScaleControl(scaleHostRef.current, containerRef.current);
     }, 80);
     return () => clearTimeout(timer);
   }, [mapReady, sidebarLayout]);
@@ -1719,12 +1730,6 @@ function MapInner({
             display: 'flex',
             alignItems: 'center',
             gap: 10,
-            padding: '6px 10px',
-            borderRadius: 12,
-            background: 'rgba(255, 255, 255, 0.88)',
-            border: '1px solid rgba(216, 210, 202, 0.9)',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
-            backdropFilter: 'blur(4px)',
           }}
         >
           <img
@@ -1744,17 +1749,6 @@ function MapInner({
 
       <div className="absolute z-10 pointer-events-auto" style={{ left: 16, bottom: 40 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
-          <div
-            ref={scaleHostRef}
-            style={{
-              minHeight: 18,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              pointerEvents: 'none',
-            }}
-          />
-
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button onClick={handleZoomIn} style={buttonBaseStyle()} title="Zoom avant">
             <ZoomIn className="w-4 h-4" />

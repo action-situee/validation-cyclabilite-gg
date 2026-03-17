@@ -111,7 +111,7 @@ export function ValidationSidebar({
     : commentaires;
 
   return (
-    <div className={`w-[360px] bg-white border-r-2 border-[#0a0a0a] flex flex-col h-full overflow-hidden ${className}`}>
+    <div className={`w-[360px] bg-[#E5EEE6] border-r-2 border-[#0a0a0a] flex flex-col h-full overflow-hidden ${className}`}>
       <div className="p-5 border-b-2 border-[#0a0a0a] bg-[#2E6A4A]">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 border-2 border-[#D3E4D7] flex items-center justify-center">
@@ -124,8 +124,8 @@ export function ValidationSidebar({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4 border-b-2 border-[#0a0a0a] grid grid-cols-2 gap-0">
+      <div className="flex-1 overflow-y-auto bg-[#E5EEE6]">
+        <div className="p-4 border-b-2 border-[#0a0a0a] bg-[#E5EEE6] grid grid-cols-2 gap-0">
           <div className="border-2 border-[#0a0a0a] border-r p-3 text-center">
             <div className="text-2xl text-[#2E6A4A] font-mono">{observationsCount}</div>
             <div className="text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c]">Retours</div>
@@ -136,7 +136,7 @@ export function ValidationSidebar({
           </div>
         </div>
 
-        <div className="p-4 border-b-2 border-[#0a0a0a]">
+        <div className="p-4 border-b-2 border-[#0a0a0a] bg-[#E5EEE6]">
           <h3 className="text-[10px] uppercase tracking-[0.15em] text-[#5c5c5c] mb-3">
             Corridor transfrontalier
           </h3>
@@ -175,7 +175,7 @@ export function ValidationSidebar({
           </button>
         </div>
 
-        <div className="p-4 border-b-2 border-[#0a0a0a]">
+        <div className="p-4 border-b-2 border-[#0a0a0a] bg-[#E5EEE6]">
           <h3 className="text-[10px] uppercase tracking-[0.15em] text-[#5c5c5c] mb-3">
             Filtres contributions
           </h3>
@@ -259,7 +259,7 @@ export function ValidationSidebar({
           </div>
         </div>
 
-        <div className="p-4 border-b-2 border-[#0a0a0a]">
+        <div className="p-4 border-b-2 border-[#0a0a0a] bg-[#E5EEE6]">
           <button
             onClick={() => setShowComments(!showComments)}
             className="flex items-center justify-between w-full mb-3"
@@ -328,7 +328,7 @@ export function ValidationSidebar({
           )}
         </div>
 
-        <div className="p-4">
+        <div className="p-4 bg-[#E5EEE6]">
           <button
             onClick={() => setShowExport(!showExport)}
             className="flex items-center justify-between w-full text-[10px] uppercase tracking-[0.12em] text-[#999] hover:text-[#2E6A4A] transition-colors"

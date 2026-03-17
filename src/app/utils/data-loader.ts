@@ -50,7 +50,7 @@ export const CORRIDORS_GEOJSON_URL = env.VITE_CORRIDORS_GEOJSON_URL || '/data/co
  * Propriétés optionnelles :
  *   sous_titre_affichage, question_cle
  */
-export const CIBLES_GEOJSON_URL = env.VITE_CIBLES_GEOJSON_URL || '';
+export const CIBLES_GEOJSON_URL = env.VITE_CIBLES_GEOJSON_URL || '/data/cibles.geojson';
 
 /**
  * URL du Google Sheet publié en CSV pour les points d'attention.

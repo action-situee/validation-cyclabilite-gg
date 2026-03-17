@@ -113,6 +113,7 @@ export interface Faisceau {
 
 export interface BikeSegment {
   segment_id: string;
+  spatial_unit?: 'segment' | 'carreau200';
   corridor_id: string;
   corridor_name: string;
   corridor_color: string;

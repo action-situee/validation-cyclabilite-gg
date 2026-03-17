@@ -34,7 +34,7 @@ export function Sidebar({
   };
 
   return (
-    <div className={`w-[360px] bg-white border-l-2 border-[#0a0a0a] flex flex-col h-full overflow-hidden ${className}`}>
+    <div className={`w-[360px] bg-[#E5EEE6] border-l-2 border-[#0a0a0a] flex flex-col h-full overflow-hidden ${className}`}>
       <div className="p-5 border-b-2 border-[#0a0a0a] bg-[#2E6A4A]">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 border-2 border-[#D3E4D7] flex items-center justify-center">
@@ -47,7 +47,7 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto bg-[#E5EEE6]">
         <div className="p-4 border-b-2 border-[#0a0a0a] bg-[#E5EEE6] space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div>
