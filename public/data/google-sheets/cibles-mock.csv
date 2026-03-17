@@ -1,0 +1,11 @@
+cible_id,faisceau_id,faisceau_nom,theme_principal,latitude,longitude,titre_affichage,sous_titre_affichage,question_cle,score,classe
+PS_001,plo_stjulien,Saint-Julien - PLO - Geneve,equipements,46.1432,6.0835,Parking velo gare routiere St-Julien,Stationnement securise absent,Le stationnement velo est-il suffisant au pole d echange ?,1.8,tres_faible
+PS_002,plo_stjulien,Saint-Julien - PLO - Geneve,permeabilite_frontiere,46.1505,6.0955,Passage frontiere Bardonnex,Franchissement critique,Le passage frontalier est-il adapte aux cyclistes ?,1.9,tres_faible
+PS_003,plo_stjulien,Saint-Julien - PLO - Geneve,intersections,46.1548,6.1005,Carrefour Route de Saint-Julien / Bardonnex,,La traversee de ce carrefour est-elle securisee pour les cyclistes ?,2.8,faible
+PS_004,plo_stjulien,Saint-Julien - PLO - Geneve,continuite,46.1680,6.1110,Discontinuite Route de Saconnex-d Arve,Rupture de la piste cyclable,La continuite cyclable est-elle assuree sur cet axe ?,2.2,faible
+PS_005,plo_stjulien,Saint-Julien - PLO - Geneve,equipements,46.1855,6.1330,Station velo Carouge-Arve,Arceaux pompe reparation,Les equipements sont-ils suffisants pour un pole multimodal ?,3.1,moyen
+TG_001,thonex_gaillard,Gaillard - Thonex - Eaux-Vives,giratoires,46.1940,6.2310,Giratoire Avenue de Gaillard,Giratoire primaire multi-voies,Le giratoire est-il praticable a velo en securite ?,2.7,faible
+TG_002,thonex_gaillard,Gaillard - Thonex - Eaux-Vives,permeabilite_frontiere,46.1985,6.2220,Passage frontiere Moillesulaz,,La permeabilite frontaliere est-elle suffisante pour les cyclistes ?,2.3,faible
+TG_003,thonex_gaillard,Gaillard - Thonex - Eaux-Vives,continuite,46.2005,6.2090,Discontinuite Rue de Geneve / Thonex,Bande cyclable interrompue,La continuite cyclable est-elle assuree le long de cet axe ?,2.5,faible
+TG_004,thonex_gaillard,Gaillard - Thonex - Eaux-Vives,intersections,46.2028,6.1940,Carrefour Gradelle / Route de Chene,,La gestion de cette intersection est-elle securisee pour les cyclistes ?,3.1,moyen
+TG_005,thonex_gaillard,Gaillard - Thonex - Eaux-Vives,alternatives,46.2058,6.1630,Jonction Eaux-Vives / lac,Raccordement au reseau genevois,Le raccordement aux voies cyclables genevoises est-il lisible et continu ?,3.5,bon

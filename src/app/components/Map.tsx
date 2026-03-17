@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { Box, Compass, Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
+import { Box, ChevronDown, Compass, Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import { PMTiles, Protocol } from 'pmtiles';
 import type { BikeSegment, Cible, Faisceau, ObservationLibre } from '../types';
@@ -11,7 +11,7 @@ import {
   getMetricValue,
   type BikeMetricKey,
 } from '../config/bikeMetrics';
-import type { BasemapMode } from '../config/basemaps';
+import { BASEMAP_OPTIONS, type BasemapMode } from '../config/basemaps';
 
 interface MapProps {
   cibles: Cible[];
@@ -22,6 +22,7 @@ interface MapProps {
   selectedMetric: BikeMetricKey;
   metricThresholds: number[];
   basemap: BasemapMode;
+  onBasemapChange: (basemap: BasemapMode) => void;
   onCibleClick: (cible: Cible) => void;
   onSegmentClick: (segment: BikeSegment) => void;
   onHoverSegment: (segment: BikeSegment | null) => void;
@@ -45,6 +46,7 @@ type AnalysisScale = 'segment' | 'carreau200';
 
 const DEFAULT_CENTER: [number, number] = [6.16, 46.23];
 const DEFAULT_ZOOM = 11;
+const MAX_MAP_ZOOM = 18;
 const DEFAULT_BEARING = 0;
 const DEFAULT_PITCH = 0;
 const TERRITORY_MAX_BOUNDS: [[number, number], [number, number]] = [
@@ -62,6 +64,7 @@ const SEGMENT_DETAIL_ZOOM = 11;
 const SCALE_BLEND_START = 10.7;
 const SCALE_BLEND_END = 11.2;
 const LABEL_LAYER_PATTERN = /country|state|province|region|place|settlement|locality|commune|municipality|city|town|village|hamlet|admin|airport|airfield|aerodrome|aeroway/i;
+const WATER_LAYER_PATTERN = /water|lake|riverbank|reservoir|bassin|hydro/i;
 const ROUTE_NUMBER_LAYER_PATTERN = /shield|road[-_ ]?number|route[-_ ]?number|strassen[-_ ]?nummer|strassennummer|routenummer|highway[-_ ]?number|motorway[-_ ]?number|nationalstrasse|autobahn/i;
 const ROUTE_NUMBER_FIELD_PATTERN = /shield|road[-_ ]?number|route[-_ ]?number|strassen[-_ ]?nummer|strassennummer|routenummer|ref|nationalstrasse|autobahn/i;
 const env = import.meta.env as Record<string, string | undefined>;
@@ -72,7 +75,6 @@ const PERIMETER_SOURCE_LAYER = env.VITE_PERIMETER_SOURCE_LAYER || DEFAULT_PERIME
 const SEGMENT_QUERY_RADII = [0, 18, 36, 72, 144];
 const MODUS_LOGO_URL = 'https://github.com/action-situee/assets/blob/main/images/modus-2025.png?raw=true';
 const GENEVE_LOGO_URL = 'https://raw.githubusercontent.com/action-situee/assets/380a38d67ffe6f8270cf52c0d9431d1f05f3b12e/images/Logo_Genf.svg';
-
 type RenderedFeature = GeoJSON.Feature<GeoJSON.Geometry, GeoJSON.GeoJsonProperties> & {
   properties?: Record<string, unknown>;
 };
@@ -174,50 +176,136 @@ function buildCorridorsGeoJson(faisceaux: Faisceau[]) {
 function buildCiblesGeoJson(cibles: Cible[]) {
   return {
     type: 'FeatureCollection',
-    features: cibles.map((cible) => ({
-      type: 'Feature',
-      properties: {
-        id: cible.cible_id,
-        cible_id: cible.cible_id,
-        faisceau_id: cible.faisceau_id,
-        faisceau_nom: cible.faisceau_nom,
-        theme_principal: cible.theme_principal,
-        titre_affichage: cible.titre_affichage,
-        sous_titre_affichage: cible.sous_titre_affichage || '',
-        question_cle: cible.question_cle || '',
-        score_indice_calcule: cible.score_indice_calcule,
-        classe_indice_calcule: cible.classe_indice_calcule,
-        markerColor: getThemeNeon(cible.theme_principal),
-      },
-      geometry: {
-        type: 'Point',
-        coordinates: [cible.longitude, cible.latitude],
-      },
-    })),
+    features: cibles.flatMap((cible) => {
+      const longitude = Number(cible.longitude);
+      const latitude = Number(cible.latitude);
+      if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+        return [];
+      }
+
+      return [{
+        type: 'Feature',
+        properties: {
+          id: cible.cible_id,
+          cible_id: cible.cible_id,
+          faisceau_id: cible.faisceau_id,
+          faisceau_nom: cible.faisceau_nom,
+          theme_principal: cible.theme_principal,
+          titre_affichage: cible.titre_affichage,
+          sous_titre_affichage: cible.sous_titre_affichage || '',
+          question_cle: cible.question_cle || '',
+          score_indice_calcule: cible.score_indice_calcule,
+          classe_indice_calcule: cible.classe_indice_calcule,
+          markerColor: getThemeNeon(cible.theme_principal),
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [longitude, latitude],
+        },
+      }];
+    }),
   };
 }
 
 function buildObservationsGeoJson(observations: ObservationLibre[]) {
   return {
     type: 'FeatureCollection',
-    features: observations.map((obs) => ({
-      type: 'Feature',
-      properties: {
-        id: obs.id,
-        categorie: obs.categorie,
-        commentaire: obs.commentaire,
-        auteur: obs.auteur,
-        date: obs.date,
-        cible_id: obs.cible_id || '',
-        segment_id: obs.segment_id || '',
-        obsColor: OBS_NEON[obs.categorie] || '#8338ec',
-      },
-      geometry: {
-        type: 'Point',
-        coordinates: [obs.longitude, obs.latitude],
-      },
-    })),
+    features: observations.flatMap((obs) => {
+      const longitude = Number(obs.longitude);
+      const latitude = Number(obs.latitude);
+      if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+        return [];
+      }
+
+      return [{
+        type: 'Feature',
+        properties: {
+          id: obs.id,
+          categorie: obs.categorie,
+          commentaire: obs.commentaire,
+          auteur: obs.auteur,
+          date: obs.date,
+          cible_id: obs.cible_id || '',
+          segment_id: obs.segment_id || '',
+          obsColor: OBS_NEON[obs.categorie] || '#8338ec',
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [longitude, latitude],
+        },
+      }];
+    }),
   };
+}
+
+function buildPointMarkerElement(options: {
+  color: string;
+  size: number;
+  variant: 'cible' | 'observation';
+  selected?: boolean;
+}) {
+  const markerSize = options.variant === 'observation'
+    ? Math.max(options.size + 2, Math.round(options.size * 1.2))
+    : options.size;
+  const element = document.createElement('button');
+  element.type = 'button';
+  element.setAttribute('aria-label', 'Point sur la carte');
+  element.style.width = `${markerSize}px`;
+  element.style.height = `${markerSize}px`;
+  element.style.display = 'flex';
+  element.style.alignItems = 'center';
+  element.style.justifyContent = 'center';
+  element.style.cursor = 'pointer';
+  element.style.padding = '0';
+  element.style.margin = '0';
+  element.style.outline = 'none';
+  element.style.background = 'transparent';
+  element.style.border = 'none';
+  element.style.pointerEvents = 'auto';
+  element.style.overflow = 'visible';
+
+  const shape = document.createElement('span');
+  shape.style.position = 'relative';
+  shape.style.display = 'block';
+  shape.style.width = `${markerSize}px`;
+  shape.style.height = `${markerSize}px`;
+  shape.style.background = 'transparent';
+  shape.style.overflow = 'visible';
+
+  if (options.variant === 'cible') {
+    shape.style.background = options.color;
+    shape.style.border = '1.5px solid #0A0A0A';
+    shape.style.borderRadius = '999px';
+    if (options.selected) {
+      shape.style.boxShadow = '0 0 0 3px rgba(255,214,10,0.7)';
+    }
+  } else {
+    const armLength = Math.max(10, Math.round(markerSize * 0.78));
+    const armThickness = Math.max(2, Math.round(markerSize * 0.14));
+    const armA = document.createElement('span');
+    armA.style.position = 'absolute';
+    armA.style.left = '50%';
+    armA.style.top = '50%';
+    armA.style.width = `${armLength}px`;
+    armA.style.height = `${armThickness}px`;
+    armA.style.background = options.color;
+    armA.style.borderRadius = '999px';
+    armA.style.transform = 'translate(-50%, -50%) rotate(45deg)';
+
+    const armB = armA.cloneNode() as HTMLSpanElement;
+    armB.style.transform = 'translate(-50%, -50%) rotate(-45deg)';
+
+    shape.appendChild(armA);
+    shape.appendChild(armB);
+  }
+
+  element.appendChild(shape);
+  return element;
+}
+
+function clearMarkers(markersRef: React.MutableRefObject<maplibregl.Marker[]>) {
+  markersRef.current.forEach((marker) => marker.remove());
+  markersRef.current = [];
 }
 
 function buildSelectedSegmentFromFeature(
@@ -304,6 +392,7 @@ function bringPointLayersToFront(map: maplibregl.Map) {
   [
     'observations-halo',
     'observations-layer',
+    'cibles-hit-area',
     'cibles-shadow',
     'cibles-halo',
     'cibles-layer',
@@ -405,6 +494,22 @@ function applyTextLayerVisibility(map: maplibregl.Map, visible: boolean) {
 
 function moveLabelLayersToTop(map: maplibregl.Map) {
   getLabelLayerIds(map).forEach((layerId) => moveLayerToTop(map, layerId));
+}
+
+function getWaterLayerIds(map: maplibregl.Map) {
+  const layers = map.getStyle()?.layers || [];
+  return layers
+    .filter((layer) => layer.type === 'fill' || layer.type === 'line')
+    .filter((layer) => {
+      const layerId = String(layer.id || '');
+      const sourceLayer = String(layer['source-layer'] || '');
+      return WATER_LAYER_PATTERN.test(layerId) || WATER_LAYER_PATTERN.test(sourceLayer);
+    })
+    .map((layer) => layer.id);
+}
+
+function moveWaterLayersAboveCarreaux(map: maplibregl.Map) {
+  getWaterLayerIds(map).forEach((layerId) => moveLayerToTop(map, layerId));
 }
 
 function isRouteNumberLayer(layer: maplibregl.StyleLayer) {
@@ -616,9 +721,12 @@ function reorderMapLayers(map: maplibregl.Map) {
   [
     'corridors-fill',
     'corridors-outline',
-    'segments-layer',
     'carreau200-fill',
     'carreau200-outline',
+  ].forEach((layerId) => moveLayerToTop(map, layerId));
+  moveWaterLayersAboveCarreaux(map);
+  [
+    'segments-layer',
     'perimeter-casing',
     'perimeter-outline',
     'segments-selected-halo',
@@ -677,6 +785,7 @@ function MapInner({
   selectedMetric,
   metricThresholds,
   basemap,
+  onBasemapChange,
   onCibleClick,
   onSegmentClick,
   onHoverSegment,
@@ -706,10 +815,13 @@ function MapInner({
   const cursorPositionRef = useRef<{ lng: number; lat: number } | null>(null);
   const originalLabelFieldsRef = useRef<Record<string, unknown>>({});
   const onCibleClickRef = useRef(onCibleClick);
+  const onBasemapChangeRef = useRef(onBasemapChange);
   const onSegmentClickRef = useRef(onSegmentClick);
   const onHoverSegmentRef = useRef(onHoverSegment);
   const onMapBackgroundClickRef = useRef(onMapBackgroundClick);
   const onMapClickRef = useRef(onMapClick);
+  const cibleMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const observationMarkersRef = useRef<maplibregl.Marker[]>([]);
   const addModeRef = useRef(addMode);
   const metricThresholdsRef = useRef(metricThresholds);
   const selectedMetricRef = useRef(selectedMetric);
@@ -738,6 +850,10 @@ function MapInner({
   useEffect(() => {
     onCibleClickRef.current = onCibleClick;
   }, [onCibleClick]);
+
+  useEffect(() => {
+    onBasemapChangeRef.current = onBasemapChange;
+  }, [onBasemapChange]);
 
   useEffect(() => {
     onSegmentClickRef.current = onSegmentClick;
@@ -1036,7 +1152,7 @@ function MapInner({
         paint: {
           'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 5.4, 11, 7, 14, 8.8],
           'circle-color': '#ffffff',
-          'circle-opacity': 0.92,
+          'circle-opacity': 0,
         },
       });
     }
@@ -1051,7 +1167,7 @@ function MapInner({
           'circle-color': ['coalesce', ['get', 'obsColor'], '#8338ec'],
           'circle-stroke-width': 1.6,
           'circle-stroke-color': '#0a0a0a',
-          'circle-opacity': 0.98,
+          'circle-opacity': 0,
         },
       });
     }
@@ -1063,6 +1179,19 @@ function MapInner({
       });
     }
 
+    if (!map.getLayer('cibles-hit-area')) {
+      map.addLayer({
+        id: 'cibles-hit-area',
+        type: 'circle',
+        source: 'cibles',
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 10.5, 10, 12.8, 13, 15.8],
+          'circle-color': '#000000',
+          'circle-opacity': 0,
+        },
+      });
+    }
+
     if (!map.getLayer('cibles-shadow')) {
       map.addLayer({
         id: 'cibles-shadow',
@@ -1071,7 +1200,7 @@ function MapInner({
         paint: {
           'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 9.5, 10, 11.5, 13, 14.5],
           'circle-color': '#111111',
-          'circle-opacity': 0.36,
+          'circle-opacity': 0,
           'circle-blur': 0.2,
         },
       });
@@ -1085,7 +1214,7 @@ function MapInner({
         paint: {
           'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 8.2, 10, 9.5, 13, 11.8],
           'circle-color': '#ffffff',
-          'circle-opacity': 0.98,
+          'circle-opacity': 0,
         },
       });
     }
@@ -1100,7 +1229,7 @@ function MapInner({
           'circle-color': ['coalesce', ['get', 'markerColor'], '#2E6A4A'],
           'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 7, 1.6, 10, 1.9, 13, 2.2],
           'circle-stroke-color': '#0a0a0a',
-          'circle-opacity': 1,
+          'circle-opacity': 0,
         },
       });
     }
@@ -1116,7 +1245,7 @@ function MapInner({
           'circle-color': 'rgba(255,255,255,0)',
           'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 7, 2.4, 10, 3, 13, 3.4],
           'circle-stroke-color': '#FFD60A',
-          'circle-opacity': 1,
+          'circle-opacity': 0,
         },
       });
     }
@@ -1202,9 +1331,10 @@ function MapInner({
         container: containerRef.current,
         style: resolveBasemapStyle(basemap) as any,
         center: cameraStateRef.current.center,
-        zoom: cameraStateRef.current.zoom,
+        zoom: Math.min(cameraStateRef.current.zoom, MAX_MAP_ZOOM),
         bearing: cameraStateRef.current.bearing,
         pitch: cameraStateRef.current.pitch,
+        maxZoom: MAX_MAP_ZOOM,
         maxPitch: 60,
         maxBounds: TERRITORY_MAX_BOUNDS,
         attributionControl: false,
@@ -1266,7 +1396,9 @@ function MapInner({
           return;
         }
 
-        const cibleFeature = queryLayerFeature(event.point, 'cibles-layer');
+        const cibleFeature =
+          queryLayerFeature(event.point, 'cibles-hit-area') ||
+          queryLayerFeature(event.point, 'cibles-layer');
         if (cibleFeature?.properties) {
           onCibleClickRef.current({
             cible_id: String(cibleFeature.properties.cible_id || ''),
@@ -1320,7 +1452,9 @@ function MapInner({
           return;
         }
 
-        const cibleFeature = queryLayerFeature(event.point, 'cibles-layer');
+        const cibleFeature =
+          queryLayerFeature(event.point, 'cibles-hit-area') ||
+          queryLayerFeature(event.point, 'cibles-layer');
         if (cibleFeature?.properties) {
           hoveredSegmentIdRef.current = null;
           onHoverSegmentRef.current(null);
@@ -1368,8 +1502,9 @@ function MapInner({
         if (!message) return;
 
         if (message.includes('perimeter') || message.includes('canton_perimeter')) {
-          setPerimeterAvailable(false);
-          setShowPerimeter(false);
+          // Style switches can emit transient perimeter-related load errors while
+          // sources/layers are being reattached. Do not permanently disable the
+          // perimeter toggle here; availability is managed when sources are added.
           return;
         }
 
@@ -1439,6 +1574,8 @@ function MapInner({
         map.off('mousemove', handleMouseMove);
         map.getCanvas().removeEventListener('mouseleave', resetCursor);
         map.off('error', handleMapError);
+        clearMarkers(cibleMarkersRef);
+        clearMarkers(observationMarkersRef);
         map.remove();
         mapRef.current = null;
         setMapReady(false);
@@ -1524,6 +1661,68 @@ function MapInner({
 
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
+    const map = mapRef.current;
+    clearMarkers(cibleMarkersRef);
+
+    cibles.forEach((cible) => {
+      if (!Number.isFinite(cible.longitude) || !Number.isFinite(cible.latitude)) return;
+
+      const element = buildPointMarkerElement({
+        color: getThemeNeon(cible.theme_principal),
+        size: selectedCible?.cible_id === cible.cible_id ? 16 : 12,
+        variant: 'cible',
+        selected: selectedCible?.cible_id === cible.cible_id,
+      });
+      element.title = cible.titre_affichage;
+      element.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onCibleClickRef.current(cible);
+      });
+
+      const marker = new maplibregl.Marker({
+        element,
+        anchor: 'center',
+      })
+        .setLngLat([cible.longitude, cible.latitude])
+        .addTo(map);
+
+      cibleMarkersRef.current.push(marker);
+    });
+
+    return () => clearMarkers(cibleMarkersRef);
+  }, [mapReady, cibles, selectedCible]);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+    const map = mapRef.current;
+    clearMarkers(observationMarkersRef);
+
+    observations.forEach((observation) => {
+      if (!Number.isFinite(observation.longitude) || !Number.isFinite(observation.latitude)) return;
+
+      const element = buildPointMarkerElement({
+        color: OBS_NEON[observation.categorie] || '#8338ec',
+        size: 12,
+        variant: 'observation',
+      });
+      element.title = observation.commentaire;
+
+      const marker = new maplibregl.Marker({
+        element,
+        anchor: 'center',
+      })
+        .setLngLat([observation.longitude, observation.latitude])
+        .addTo(map);
+
+      observationMarkersRef.current.push(marker);
+    });
+
+    return () => clearMarkers(observationMarkersRef);
+  }, [mapReady, observations]);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
     mapRef.current.setFilter(
       'cibles-selected',
       selectedCible
@@ -1594,7 +1793,7 @@ function MapInner({
     if (!mapReady || !mapRef.current || !flyTo) return;
     mapRef.current.flyTo({
       center: [flyTo.center[1], flyTo.center[0]],
-      zoom: flyTo.zoom,
+      zoom: Math.min(flyTo.zoom, MAX_MAP_ZOOM),
       duration: 1200,
     });
   }, [mapReady, flyTo]);
@@ -1803,6 +2002,58 @@ function MapInner({
           >
             <Compass className="w-4 h-4" style={{ transform: `rotate(${-cameraDebug.bearing}deg)` }} />
           </button>
+          <div
+            style={{
+              position: 'relative',
+              height: 34,
+              minWidth: 136,
+              borderRadius: 10,
+              border: '1px solid #D8D2CA',
+              background: 'rgba(255, 255, 255, 0.94)',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+              overflow: 'hidden',
+            }}
+            title="Fond de carte"
+          >
+            <select
+              value={basemap}
+              onChange={(event) => onBasemapChangeRef.current(event.target.value as BasemapMode)}
+              aria-label="Fond de carte"
+              style={{
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+                width: '100%',
+                height: '100%',
+                padding: '0 30px 0 10px',
+                border: 'none',
+                outline: 'none',
+                background: 'transparent',
+                color: '#3F3F3F',
+                fontFamily: 'Arial, sans-serif',
+                fontSize: 12,
+                cursor: 'pointer',
+              }}
+            >
+              {BASEMAP_OPTIONS.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              className="pointer-events-none"
+              style={{
+                position: 'absolute',
+                right: 9,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: 14,
+                height: 14,
+                color: '#5A5A5A',
+              }}
+            />
+          </div>
           </div>
         </div>
       </div>

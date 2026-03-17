@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import type { BikeSegment } from '../types';
+import { InfoTip } from './InfoTip';
 import {
   BIKE_CLASS_BY_KEY,
   BIKE_CLASS_DEFINITIONS,
@@ -45,8 +46,9 @@ export function HoveredSegmentCard({
     ? isCarreau
       ? 'maille 200 m'
       : segment.segment_id
-    : 'en attente';
-  const emptyStateLabel = isCarreau
+    : null;
+  const emptyStateLabel = 'Survolez la carte';
+  const emptyStateHint = isCarreau
     ? 'Survolez un carreau ou un segment pour lire son profil et choisir la classe affichee sur la carte.'
     : 'Survolez un segment pour lire son profil et choisir la classe affichee sur la carte.';
 
@@ -102,9 +104,13 @@ export function HoveredSegmentCard({
       <div className="p-4 border-b border-[#e0e0dc] bg-[#E5EEE6]">
         <div className="flex items-center justify-between gap-3 mb-2">
           <p className="text-[10px] uppercase tracking-[0.12em] text-[#2E6A4A]">{statusLabel}</p>
-          <span className="text-[10px] text-[#999] font-mono">
-            {identifierLabel}
-          </span>
+          {identifierLabel ? (
+            <span className="text-[10px] text-[#999] font-mono">
+              {identifierLabel}
+            </span>
+          ) : (
+            <InfoTip text={emptyStateHint} align="right" />
+          )}
         </div>
         <p className="text-[12px] text-[#0a0a0a] leading-relaxed">
           {segment?.corridor_name || emptyStateLabel}

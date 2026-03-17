@@ -1,0 +1,6 @@
+id,type,auteur,organisation,faisceau_id,segment_id,cible_id,latitude,longitude,indice_juge,commentaire,date
+OBS_001,validation,Association velo Sud,Pro Velo locale,plo_stjulien,SEG_PLO_1042,PS_002,46.1505,6.0955,trop_eleve,Le passage frontalier reste plus stressant que le score actuel ne le laisse penser,2026-03-17
+OBS_002,amenagement,Camille R.,Habitante,plo_stjulien,SEG_PLO_1187,PS_004,46.1680,6.1110,,Ajouter un marquage plus lisible et traiter la rupture de piste au carrefour,2026-03-17
+OBS_003,positif,Nicolas T.,Collectif local,thonex_gaillard,SEG_EST_2203,TG_003,46.2005,6.2090,,Le confort est bon hors heure de pointe et le corridor reste lisible,2026-03-16
+OBS_004,danger,Equipe terrain est,Diagnostic corridor,thonex_gaillard,SEG_EST_2316,TG_001,46.1940,6.2310,,Conflit frequent avec les tourne a droite a l entree du giratoire,2026-03-16
+OBS_005,validation,Coordination corridor est,Association locale,thonex_gaillard,412830,TG_004,46.2028,6.1940,trop_faible,Le score devrait etre un peu meilleur sur cette section une fois le trafic calme,2026-03-15

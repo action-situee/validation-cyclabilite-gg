@@ -4,7 +4,12 @@ import { FAISCEAUX as MOCK_FAISCEAUX } from '../mock-data/faisceaux';
 import { mockCibles } from '../mock-data/cibles';
 import { storageService } from '../utils/storage';
 import { resolveFingerprint } from '../utils/fingerprint';
-import { loadCibles, loadCorridors } from '../utils/data-loader';
+import {
+  loadCibles,
+  loadCommentairesFromSheet,
+  loadCorridors,
+  loadObservationsFromSheet,
+} from '../utils/data-loader';
 import { contributionsApi } from '../utils/api';
 
 interface AppDataContextType {
@@ -51,21 +56,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const localObservations = storageService.getAllObservations();
-    const localCommentaires = storageService.getAllCommentaires();
-    setObservations(localObservations);
-    setCommentaires(localCommentaires);
-
-    contributionsApi.getObservations().then((remote) => {
-      if (remote) {
-        storageService.replaceAllObservations(remote);
+    loadObservationsFromSheet().then((remote) => {
+      if (remote && remote.length > 0) {
         setObservations(remote);
       }
     });
 
-    contributionsApi.getCommentaires().then((remote) => {
-      if (remote) {
-        storageService.replaceAllCommentaires(remote);
+    loadCommentairesFromSheet().then((remote) => {
+      if (remote && remote.length > 0) {
         setCommentaires(remote);
       }
     });

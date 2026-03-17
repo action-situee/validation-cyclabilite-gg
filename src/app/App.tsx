@@ -315,8 +315,6 @@ function AppInner() {
     onMetricChange: setSelectedMetric,
     hoveredSegment: hoveredSegment || selectedSegment,
     hoveredSegmentSource: hoveredSegment ? 'hover' : selectedSegment ? 'selected' : 'none',
-    basemap,
-    onBasemapChange: setBasemap,
     activeThresholds,
   };
 
@@ -368,73 +366,76 @@ function AppInner() {
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#E5EEE6]">
       {/* Barre supérieure – brutalist */}
-      <div className="bg-white border-b-2 border-[#0a0a0a] px-4 py-2.5 flex items-center justify-between z-20 shrink-0 relative">
-        <div className="flex items-center gap-4 min-w-0 shrink-0 z-10">
+      <div className="bg-white border-b-2 border-[#0a0a0a] px-3 py-2.5 sm:px-4 z-20 shrink-0">
+        <div className="grid grid-cols-[auto_1fr] items-start gap-x-3 gap-y-2 sm:grid-cols-[auto_1fr_auto] sm:items-center">
+          <div className="flex items-center gap-4 min-w-0 shrink-0">
           <Bike className="w-5 h-5 text-[#2E6A4A]" />
-        </div>
+          </div>
 
-        <div className="absolute inset-x-0 flex justify-center px-16 sm:px-24 lg:px-40 pointer-events-none">
-          <div className="min-w-0 max-w-[34rem] text-center">
-            <h1 className="text-[14px] leading-tight text-[#0a0a0a] uppercase tracking-[0.08em]">
+          <div className="min-w-0 sm:px-4 sm:text-center">
+            <h1 className="text-[12px] sm:text-[14px] leading-tight text-[#0a0a0a] uppercase tracking-[0.08em]">
               Validation de l&apos;indice de cyclabilite
             </h1>
-            <p className="text-[10px] leading-tight text-[#5c5c5c] uppercase tracking-[0.12em]">
+            <p className="hidden sm:block text-[10px] leading-tight text-[#5c5c5c] uppercase tracking-[0.12em]">
               sur deux faisceaux transfrontaliers
             </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0 z-10">
-          <div
-            className="flex items-center gap-0.5 rounded-full bg-[#DCE7DE] p-0.5"
-            aria-label="Controle des sidebars"
-          >
-            {sidebarToggleButtons.map(({ key, label, active, Icon, onClick }) => (
-              <button
-                key={key}
-                onClick={onClick}
-                className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full transition-all ${
-                  active
-                    ? 'bg-[#2E6A4A] text-[#D3E4D7] shadow-[0_2px_6px_rgba(46,106,74,0.22)]'
-                    : 'bg-transparent text-[#5c5c5c] hover:bg-white/85'
-                }`}
-                aria-label={label}
-                title={label}
-              >
-                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </button>
-            ))}
+            <p className="sm:hidden text-[9px] leading-tight text-[#5c5c5c] uppercase tracking-[0.12em]">
+              Grand Geneve
+            </p>
           </div>
 
-          <button
-            onClick={() => setShowSurvey(true)}
-            className="p-2 border-2 border-transparent hover:border-[#0a0a0a] transition-all"
-            aria-label="Questionnaire"
-            title="Questionnaire rapide"
-          >
-            <ClipboardCheck className="w-5 h-5 text-[#2E6A4A]" />
-          </button>
+          <div className="col-span-2 flex flex-wrap items-center gap-1.5 sm:col-span-1 sm:justify-end sm:gap-2 shrink-0">
+            <div
+              className="flex items-center gap-0.5 rounded-full bg-[#DCE7DE] p-0.5"
+              aria-label="Controle des sidebars"
+            >
+              {sidebarToggleButtons.map(({ key, label, active, Icon, onClick }) => (
+                <button
+                  key={key}
+                  onClick={onClick}
+                  className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full transition-all ${
+                    active
+                      ? 'bg-[#2E6A4A] text-[#D3E4D7] shadow-[0_2px_6px_rgba(46,106,74,0.22)]'
+                      : 'bg-transparent text-[#5c5c5c] hover:bg-white/85'
+                  }`}
+                  aria-label={label}
+                  title={label}
+                >
+                  <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </button>
+              ))}
+            </div>
 
-          <button
-            onClick={() => setShowHelp(true)}
-            className="p-2 border-2 border-transparent hover:border-[#0a0a0a] transition-all"
-            aria-label="Mode d'emploi"
-            title="Mode d'emploi"
-          >
-            <HelpCircle className="w-5 h-5 text-[#2E6A4A]" />
-          </button>
+            <button
+              onClick={() => setShowSurvey(true)}
+              className="p-1.5 sm:p-2 border-2 border-transparent hover:border-[#0a0a0a] transition-all"
+              aria-label="Questionnaire"
+              title="Questionnaire rapide"
+            >
+              <ClipboardCheck className="w-5 h-5 text-[#2E6A4A]" />
+            </button>
 
-          <Button
-            variant={addMode || shouldPulseAddButton ? 'primary' : 'outline'}
-            size="sm"
-            onClick={handleAddButtonClick}
-            className={shouldPulseAddButton ? 'animate-pulse' : ''}
-          >
-            {addMode ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            <span className="hidden sm:inline">
-              {addMode ? 'Annuler' : shouldPulseAddButton ? 'Commenter le troncon' : 'Ajouter'}
-            </span>
-          </Button>
+            <button
+              onClick={() => setShowHelp(true)}
+              className="p-1.5 sm:p-2 border-2 border-transparent hover:border-[#0a0a0a] transition-all"
+              aria-label="Mode d'emploi"
+              title="Mode d'emploi"
+            >
+              <HelpCircle className="w-5 h-5 text-[#2E6A4A]" />
+            </button>
+
+            <Button
+              variant={addMode || shouldPulseAddButton ? 'primary' : 'outline'}
+              size="sm"
+              onClick={handleAddButtonClick}
+              className={`ml-auto sm:ml-0 ${shouldPulseAddButton ? 'animate-pulse' : ''}`}
+            >
+              {addMode ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              <span className="hidden sm:inline">
+                {addMode ? 'Annuler' : shouldPulseAddButton ? 'Commenter le troncon' : 'Ajouter'}
+              </span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -478,6 +479,7 @@ function AppInner() {
               selectedMetric={selectedMetric}
               metricThresholds={activeThresholds}
               basemap={basemap}
+              onBasemapChange={setBasemap}
               onCibleClick={handleCibleClick}
               onSegmentClick={handleSegmentClick}
               onHoverSegment={handleHoverSegment}

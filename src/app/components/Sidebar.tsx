@@ -1,9 +1,8 @@
 import React from 'react';
-import { Bike, ChevronDown } from 'lucide-react';
+import { Bike } from 'lucide-react';
 import type { BikeSegment } from '../types';
 import { HoveredSegmentCard } from './HoveredSegmentCard';
-import type { BikeMetricKey } from '../config/bikeMetrics';
-import { BASEMAP_OPTIONS, type BasemapMode } from '../config/basemaps';
+import { VALUE_PALETTE, VALUE_THRESHOLDS, type BikeMetricKey } from '../config/bikeMetrics';
 import { InfoTip } from './InfoTip';
 
 interface SidebarProps {
@@ -12,8 +11,6 @@ interface SidebarProps {
   onMetricChange: (metric: BikeMetricKey) => void;
   hoveredSegment: BikeSegment | null;
   hoveredSegmentSource: 'hover' | 'selected' | 'none';
-  basemap: BasemapMode;
-  onBasemapChange: (basemap: BasemapMode) => void;
   activeThresholds: number[];
 }
 
@@ -23,8 +20,6 @@ export function Sidebar({
   onMetricChange,
   hoveredSegment,
   hoveredSegmentSource,
-  basemap,
-  onBasemapChange,
   activeThresholds,
 }: SidebarProps) {
   const formatThreshold = (value: number) => {
@@ -32,6 +27,28 @@ export function Sidebar({
     if (value < 0.01) return value.toFixed(3);
     return value.toFixed(2);
   };
+
+  const safeThresholds = activeThresholds.length > 0 ? activeThresholds : [...VALUE_THRESHOLDS];
+  const legendBins = VALUE_PALETTE.map((color, index) => {
+    if (index === 0) {
+      return {
+        color,
+        label: `< ${formatThreshold(safeThresholds[0])}`,
+      };
+    }
+
+    if (index === VALUE_PALETTE.length - 1) {
+      return {
+        color,
+        label: `>= ${formatThreshold(safeThresholds[safeThresholds.length - 1])}`,
+      };
+    }
+
+    return {
+      color,
+      label: `${formatThreshold(safeThresholds[index - 1])} - ${formatThreshold(safeThresholds[index])}`,
+    };
+  });
 
   return (
     <div className={`w-[360px] bg-[#E5EEE6] border-l-2 border-[#0a0a0a] flex flex-col h-full overflow-hidden ${className}`}>
@@ -55,7 +72,7 @@ export function Sidebar({
                 Indice & projection
               </h2>
               <p className="text-[10px] text-[#5c5c5c] leading-relaxed">
-                Les consignes de contribution sont dans le bouton <strong className="text-[#2E6A4A]">i</strong> en haut.
+                Les consignes de contribution sont dans le bouton <strong className="text-[#2E6A4A]">?</strong> en haut.
               </p>
             </div>
             <InfoTip text="Ce panneau regroupe la lecture de l'indice, le fond de carte et la legende quantile." />
@@ -67,28 +84,6 @@ export function Sidebar({
             source={hoveredSegmentSource}
             onMetricChange={onMetricChange}
           />
-
-          <div className="space-y-3">
-            <div>
-              <label className="block text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c] mb-2">
-                Fond de carte
-              </label>
-              <div className="relative">
-                <select
-                  value={basemap}
-                  onChange={(e) => onBasemapChange(e.target.value as BasemapMode)}
-                  className="w-full px-3 py-2 pr-9 border-2 border-[#0a0a0a] bg-white text-[13px] focus:outline-none focus:border-[#2E6A4A] transition-colors appearance-none"
-                >
-                  {BASEMAP_OPTIONS.map((option) => (
-                    <option key={option.key} value={option.key}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5c5c5c] pointer-events-none" />
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="p-4 bg-[#E5EEE6]">
@@ -98,22 +93,19 @@ export function Sidebar({
             </h3>
             <InfoTip text="Les couleurs sont calculees en quantiles sur tout le territoire du Grand Geneve, pas uniquement sur la vue courante." />
           </div>
-          <div className="flex items-center gap-1 mb-3">
-            <span className="w-5 h-2 bg-[#B00020]" />
-            <span className="w-5 h-2 bg-[#D02F1E]" />
-            <span className="w-5 h-2 bg-[#E24F24]" />
-            <span className="w-5 h-2 bg-[#FFD98A]" />
-            <span className="w-5 h-2 bg-[#F1F5A0]" />
-            <span className="w-5 h-2 bg-[#DDF4A3]" />
-            <span className="w-5 h-2 bg-[#C8EE9A]" />
-            <span className="w-5 h-2 bg-[#A6E083]" />
-            <span className="w-5 h-2 bg-[#7FCB62]" />
-            <span className="w-5 h-2 bg-[#38A74A]" />
-            <span className="w-5 h-2 bg-[#007A35]" />
+          <div className="space-y-1.5">
+            {legendBins.map((bin) => (
+              <div key={`${bin.color}-${bin.label}`} className="flex items-center gap-2">
+                <span
+                  className="w-6 h-2.5 shrink-0 border border-black/10"
+                  style={{ backgroundColor: bin.color }}
+                />
+                <span className="text-[10px] text-[#5c5c5c] font-mono leading-none">
+                  {bin.label}
+                </span>
+              </div>
+            ))}
           </div>
-          <p className="text-[10px] text-[#5c5c5c] leading-relaxed">
-            Seuils actifs: <span className="font-mono">{activeThresholds.map((value) => formatThreshold(value)).join(' · ')}</span>
-          </p>
         </div>
       </div>
     </div>

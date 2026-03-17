@@ -1,0 +1,5 @@
+id,auteur,organisation,faisceau_id,q1,q2,q3,date
+SURVEY_001,Association velo Sud,Pro Velo locale,plo_stjulien,plutot_oui,globalement_ok,Les transitions vers Bardonnex restent sous-evaluees en securite,2026-03-17
+SURVEY_002,Camille R.,Habitante,plo_stjulien,mitige,ameliorations_attendues,Le confort est bon mais plusieurs ruptures de continuite restent problematiques,2026-03-17
+SURVEY_003,Collectif est,Association locale,thonex_gaillard,plutot_oui,globalement_ok,Le corridor est lisible mais les grands carrefours baissent la perception globale,2026-03-16
+SURVEY_004,Nicolas T.,Usager quotidien,thonex_gaillard,oui_avec_reserves,a_revoir,Le score securite devrait etre plus faible sur les approches de frontiere,2026-03-16

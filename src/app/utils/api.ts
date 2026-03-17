@@ -1,8 +1,19 @@
 import type { CommentaireGeneral, ObservationLibre, SurveyResponse } from '../types';
 
-const API_BASE = import.meta.env.VITE_CONTRIBUTIONS_API_BASE || '/api';
+const API_BASE = import.meta.env.VITE_CONTRIBUTIONS_API_BASE || '';
+let warnedMissingApiBase = false;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T | null> {
+  if (!API_BASE) {
+    if (!warnedMissingApiBase) {
+      warnedMissingApiBase = true;
+      console.warn(
+        '[contributionsApi] Aucun endpoint d\'ecriture configure. Les contributions restent locales au navigateur tant que VITE_CONTRIBUTIONS_API_BASE n\'est pas defini.',
+      );
+    }
+    return null;
+  }
+
   try {
     const response = await fetch(`${API_BASE}${path}`, {
       headers: {

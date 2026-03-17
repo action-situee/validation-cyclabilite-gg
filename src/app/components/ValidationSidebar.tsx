@@ -18,26 +18,68 @@ import { Button } from './ui/Button';
 import { CIBLE_THEMES, OBS_CATEGORIES } from '../config/palette';
 import { InfoTip } from './InfoTip';
 
-function CrossSwatch({ color, active }: { color: string; active: boolean }) {
+function MarkerSwatch({
+  color,
+  active,
+  variant = 'observation',
+}: {
+  color: string;
+  active: boolean;
+  variant?: 'cible' | 'observation';
+}) {
+  const size = variant === 'cible' ? 11 : 14;
+  const armLength = Math.max(10, Math.round(size * 0.78));
+  const armThickness = Math.max(2, Math.round(size * 0.14));
+
   return (
     <span
-      className="relative inline-flex items-center justify-center w-3 h-3 shrink-0"
-      style={{ opacity: active ? 1 : 0.4 }}
+      className="relative inline-flex items-center justify-center shrink-0"
+      style={{
+        width: size,
+        height: size,
+        opacity: active ? 1 : 0.4,
+        overflow: 'visible',
+      }}
     >
-      <span
-        className="absolute w-3 h-0.5"
-        style={{
-          backgroundColor: color,
-          transform: 'rotate(45deg)',
-        }}
-      />
-      <span
-        className="absolute w-3 h-0.5"
-        style={{
-          backgroundColor: color,
-          transform: 'rotate(-45deg)',
-        }}
-      />
+      {variant === 'cible' ? (
+        <span
+          className="absolute"
+          style={{
+            backgroundColor: color,
+            width: size,
+            height: size,
+            border: '1.4px solid #0a0a0a',
+            borderRadius: 999,
+          }}
+        />
+      ) : (
+        <>
+          <span
+            className="absolute"
+            style={{
+              backgroundColor: color,
+              width: armLength,
+              height: armThickness,
+              borderRadius: 999,
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%) rotate(45deg)',
+            }}
+          />
+          <span
+            className="absolute"
+            style={{
+              backgroundColor: color,
+              width: armLength,
+              height: armThickness,
+              borderRadius: 999,
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%) rotate(-45deg)',
+            }}
+          />
+        </>
+      )}
     </span>
   );
 }
@@ -182,7 +224,7 @@ export function ValidationSidebar({
 
           <div className="flex items-center justify-between mb-1.5">
             <p className="text-[10px] uppercase tracking-[0.1em] text-[#2E6A4A] flex items-center gap-1.5">
-              <span className="inline-block w-2 h-2 bg-[#2E6A4A]" />
+              <MarkerSwatch color="#2E6A4A" active variant="cible" />
               Points d&apos;attention
               <InfoTip text="Pastilles de l'etude visibles au-dessus de l'indice. Cliquez dessus pour ouvrir le fil de discussion associe." />
             </p>
@@ -208,13 +250,7 @@ export function ValidationSidebar({
                   }`}
                   style={{ borderLeftColor: active ? item.color : 'transparent' }}
                 >
-                  <span
-                    className="w-2.5 h-2.5 shrink-0 transition-all"
-                    style={{
-                      backgroundColor: item.color,
-                      boxShadow: active ? `0 0 6px ${item.color}66` : 'none',
-                    }}
-                  />
+                  <MarkerSwatch color={item.color} active={active} variant="cible" />
                   <span className="flex-1 text-left tracking-wide">{item.label}</span>
                   {active ? <Eye className="w-3 h-3 text-[#999]" /> : <EyeOff className="w-3 h-3 text-[#ccc]" />}
                 </button>
@@ -224,7 +260,7 @@ export function ValidationSidebar({
 
           <div className="flex items-center justify-between mb-1.5">
             <p className="text-[10px] uppercase tracking-[0.1em] text-[#2E6A4A] flex items-center gap-1.5">
-              <CrossSwatch color="#2E6A4A" active />
+              <MarkerSwatch color="#2E6A4A" active />
               Vos retours terrain
               <InfoTip text="Contributions libres ajoutees avec le bouton + Ajouter." />
             </p>
@@ -250,7 +286,7 @@ export function ValidationSidebar({
                   }`}
                   style={{ borderLeftColor: active ? item.color : 'transparent' }}
                 >
-                  <CrossSwatch color={item.color} active={active} />
+                  <MarkerSwatch color={item.color} active={active} />
                   <span className="flex-1 text-left tracking-wide">{item.label}</span>
                   {active ? <Eye className="w-3 h-3 text-[#999]" /> : <EyeOff className="w-3 h-3 text-[#ccc]" />}
                 </button>

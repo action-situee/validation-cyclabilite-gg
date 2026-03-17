@@ -1,4 +1,4 @@
-@import 'maplibre-gl/dist/maplibre-gl.css';
 @import './fonts.css';
+@import 'maplibre-gl/dist/maplibre-gl.css';
 @import './tailwind.css';
 @import './theme.css';

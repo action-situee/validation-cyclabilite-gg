@@ -18,9 +18,12 @@
  * Laissez une chaîne vide '' pour utiliser les données mock.
  */
 
-import { BikeSegment, Cible, Faisceau } from '../types';
+import { BikeSegment, Cible, CommentaireGeneral, Faisceau, ObservationLibre } from '../types';
 
 const env = import.meta.env as Record<string, string | undefined>;
+const DEFAULT_CIBLES_SHEETS_CSV_URL = '/data/google-sheets/cibles-mock.csv';
+const DEFAULT_OBSERVATIONS_SHEETS_CSV_URL = '/data/google-sheets/remontees-mock.csv';
+const DEFAULT_COMMENTAIRES_SHEETS_CSV_URL = '/data/google-sheets/commentaires-mock.csv';
 
 // ─────────────────────────────────────────────────
 // SOURCES DE DONNÉES – à configurer ici
@@ -50,7 +53,7 @@ export const CORRIDORS_GEOJSON_URL = env.VITE_CORRIDORS_GEOJSON_URL || '/data/co
  * Propriétés optionnelles :
  *   sous_titre_affichage, question_cle
  */
-export const CIBLES_GEOJSON_URL = env.VITE_CIBLES_GEOJSON_URL || '/data/cibles.geojson';
+export const CIBLES_GEOJSON_URL = env.VITE_CIBLES_GEOJSON_URL || '';
 
 /**
  * URL du Google Sheet publié en CSV pour les points d'attention.
@@ -63,7 +66,19 @@ export const CIBLES_GEOJSON_URL = env.VITE_CIBLES_GEOJSON_URL || '/data/cibles.g
  * Colonnes facultatives :
  *   sous_titre_affichage, question_cle
  */
-export const CIBLES_SHEETS_CSV_URL = env.VITE_CIBLES_SHEETS_CSV_URL || '';
+export const CIBLES_SHEETS_CSV_URL = env.VITE_CIBLES_SHEETS_CSV_URL || DEFAULT_CIBLES_SHEETS_CSV_URL;
+
+/**
+ * URL du CSV local des retours terrain.
+ */
+export const OBSERVATIONS_SHEETS_CSV_URL =
+  env.VITE_OBSERVATIONS_SHEETS_CSV_URL || DEFAULT_OBSERVATIONS_SHEETS_CSV_URL;
+
+/**
+ * URL du CSV local des commentaires generaux.
+ */
+export const COMMENTAIRES_SHEETS_CSV_URL =
+  env.VITE_COMMENTAIRES_SHEETS_CSV_URL || DEFAULT_COMMENTAIRES_SHEETS_CSV_URL;
 
 /**
  * URL du GeoJSON segmentaire derive de l'atlas.
@@ -95,6 +110,51 @@ function parseCSVLine(line: string): string[] {
   }
   result.push(current.trim());
   return result;
+}
+
+function normalizeCSVHeader(value: string) {
+  return value.replace(/^\uFEFF/, '').trim().toLowerCase().replace(/\s+/g, '_');
+}
+
+function parseCSVText(text: string) {
+  const lines = text.split(/\r?\n/).filter((line) => line.trim());
+  if (lines.length < 2) {
+    return null;
+  }
+
+  const headers = parseCSVLine(lines[0]).map(normalizeCSVHeader);
+  const rows = lines.slice(1).map((line) => parseCSVLine(line));
+  return { headers, rows };
+}
+
+function getCSVColumn(row: string[], headers: string[], name: string) {
+  const index = headers.indexOf(name);
+  return index >= 0 ? row[index] || '' : '';
+}
+
+function toOptionalString(value: string) {
+  const normalized = value.trim();
+  return normalized ? normalized : undefined;
+}
+
+function toOptionalNumber(value: string) {
+  const normalized = value.trim();
+  if (!normalized) return undefined;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function normalizeObservationCategory(value: string) {
+  const normalized = value.trim();
+  if (
+    normalized === 'validation' ||
+    normalized === 'danger' ||
+    normalized === 'amenagement' ||
+    normalized === 'positif'
+  ) {
+    return normalized;
+  }
+  return 'validation';
 }
 
 
@@ -242,44 +302,122 @@ export async function loadCiblesFromSheet(): Promise<Cible[] | null> {
     if (!res.ok) { console.warn(`[data-loader] Sheets HTTP ${res.status}`); return null; }
 
     const text = await res.text();
-    const lines = text.split('\n').filter((l) => l.trim());
-    if (lines.length < 2) return null;
-
-    const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase().replace(/\s+/g, '_'));
-    const col = (row: string[], name: string): string => {
-      const idx = headers.indexOf(name);
-      return idx >= 0 ? row[idx] : '';
-    };
+    const parsed = parseCSVText(text);
+    if (!parsed) return null;
 
     const cibles: Cible[] = [];
-    for (let i = 1; i < lines.length; i++) {
-      const row = parseCSVLine(lines[i]);
-      if (row.length < 3) continue;
+    parsed.rows.forEach((row, index) => {
+      if (row.length < 3) return;
 
-      const lat = parseFloat(col(row, 'latitude'));
-      const lng = parseFloat(col(row, 'longitude'));
-      const score = parseFloat(col(row, 'score'));
-      if (isNaN(lat) || isNaN(lng)) continue;
+      const lat = Number(getCSVColumn(row, parsed.headers, 'latitude'));
+      const lng = Number(getCSVColumn(row, parsed.headers, 'longitude'));
+      const score = Number(getCSVColumn(row, parsed.headers, 'score'));
+      if (isNaN(lat) || isNaN(lng)) return;
 
       cibles.push({
-        cible_id: col(row, 'cible_id') || `GS_${i}`,
-        faisceau_id: col(row, 'faisceau_id'),
-        faisceau_nom: col(row, 'faisceau_nom'),
-        theme_principal: col(row, 'theme_principal'),
+        cible_id: getCSVColumn(row, parsed.headers, 'cible_id') || `GS_${index + 1}`,
+        faisceau_id: getCSVColumn(row, parsed.headers, 'faisceau_id'),
+        faisceau_nom: getCSVColumn(row, parsed.headers, 'faisceau_nom'),
+        theme_principal: getCSVColumn(row, parsed.headers, 'theme_principal'),
         latitude: lat,
         longitude: lng,
-        titre_affichage: col(row, 'titre_affichage'),
-        sous_titre_affichage: col(row, 'sous_titre_affichage') || undefined,
-        question_cle: col(row, 'question_cle') || undefined,
+        titre_affichage: getCSVColumn(row, parsed.headers, 'titre_affichage'),
+        sous_titre_affichage: toOptionalString(getCSVColumn(row, parsed.headers, 'sous_titre_affichage')),
+        question_cle: toOptionalString(getCSVColumn(row, parsed.headers, 'question_cle')),
         score_indice_calcule: isNaN(score) ? 0 : score,
-        classe_indice_calcule: col(row, 'classe') || 'non_evalue',
+        classe_indice_calcule: getCSVColumn(row, parsed.headers, 'classe') || 'non_evalue',
       });
-    }
+    });
 
     console.log(`[data-loader] ${cibles.length} cibles chargées depuis Google Sheets`);
     return cibles.length > 0 ? cibles : null;
   } catch (err) {
     console.warn('[data-loader] Erreur chargement Sheets :', err);
+    return null;
+  }
+}
+
+export async function loadObservationsFromSheet(): Promise<ObservationLibre[] | null> {
+  if (!OBSERVATIONS_SHEETS_CSV_URL) return null;
+
+  try {
+    const res = await fetch(OBSERVATIONS_SHEETS_CSV_URL);
+    if (!res.ok) {
+      console.warn(`[data-loader] Observations Sheets HTTP ${res.status}`);
+      return null;
+    }
+
+    const text = await res.text();
+    const parsed = parseCSVText(text);
+    if (!parsed) return null;
+
+    const observations: ObservationLibre[] = [];
+    parsed.rows.forEach((row, index) => {
+      const latitude = toOptionalNumber(getCSVColumn(row, parsed.headers, 'latitude'));
+      const longitude = toOptionalNumber(getCSVColumn(row, parsed.headers, 'longitude'));
+      if (latitude === undefined || longitude === undefined) return;
+
+      observations.push({
+        id: getCSVColumn(row, parsed.headers, 'id') || `OBS_MOCK_${index + 1}`,
+        latitude,
+        longitude,
+        commentaire: getCSVColumn(row, parsed.headers, 'commentaire'),
+        categorie: normalizeObservationCategory(getCSVColumn(row, parsed.headers, 'type')),
+        auteur: getCSVColumn(row, parsed.headers, 'auteur') || 'Anonyme',
+        organisation: toOptionalString(getCSVColumn(row, parsed.headers, 'organisation')),
+        date: getCSVColumn(row, parsed.headers, 'date') || new Date().toISOString().slice(0, 10),
+        cible_id: toOptionalString(getCSVColumn(row, parsed.headers, 'cible_id')),
+        corridor_id: toOptionalString(getCSVColumn(row, parsed.headers, 'faisceau_id')),
+        segment_id: toOptionalString(getCSVColumn(row, parsed.headers, 'segment_id')),
+        indice_juge: toOptionalString(
+          getCSVColumn(row, parsed.headers, 'indice_juge'),
+        ) as ObservationLibre['indice_juge'],
+        upvotes: 0,
+        downvotes: 0,
+        votedBy: [],
+      });
+    });
+
+    console.log(`[data-loader] ${observations.length} observations chargees depuis Google Sheets`);
+    return observations.length > 0 ? observations : null;
+  } catch (err) {
+    console.warn('[data-loader] Erreur chargement observations Sheets :', err);
+    return null;
+  }
+}
+
+export async function loadCommentairesFromSheet(): Promise<CommentaireGeneral[] | null> {
+  if (!COMMENTAIRES_SHEETS_CSV_URL) return null;
+
+  try {
+    const res = await fetch(COMMENTAIRES_SHEETS_CSV_URL);
+    if (!res.ok) {
+      console.warn(`[data-loader] Commentaires Sheets HTTP ${res.status}`);
+      return null;
+    }
+
+    const text = await res.text();
+    const parsed = parseCSVText(text);
+    if (!parsed) return null;
+
+    const commentaires: CommentaireGeneral[] = [];
+    parsed.rows.forEach((row, index) => {
+      const texte = getCSVColumn(row, parsed.headers, 'texte');
+      if (!texte.trim()) return;
+
+      commentaires.push({
+        id: getCSVColumn(row, parsed.headers, 'id') || `COM_MOCK_${index + 1}`,
+        auteur: getCSVColumn(row, parsed.headers, 'auteur') || 'Anonyme',
+        texte,
+        date: getCSVColumn(row, parsed.headers, 'date') || new Date().toISOString().slice(0, 10),
+        faisceau_id: toOptionalString(getCSVColumn(row, parsed.headers, 'faisceau_id')),
+      });
+    });
+
+    console.log(`[data-loader] ${commentaires.length} commentaires charges depuis Google Sheets`);
+    return commentaires.length > 0 ? commentaires : null;
+  } catch (err) {
+    console.warn('[data-loader] Erreur chargement commentaires Sheets :', err);
     return null;
   }
 }
