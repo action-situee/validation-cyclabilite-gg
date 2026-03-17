@@ -1,0 +1,2 @@
+id,type,auteur,organisation,faisceau_id,segment_id,cible_id,latitude,longitude,indice_juge,commentaire,date
+OBS_001,validation,Association velo exemple,Pro Velo,plo_stjulien,000123,PS_007,46.1680,6.1110,trop_faible,Le score est trop optimiste vu la rupture de piste observee,2026-03-17

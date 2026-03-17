@@ -1,0 +1,74 @@
+/* Leaflet — Swiss brutalist overrides */
+.leaflet-container {
+  font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background: #eae8e0;
+  z-index: 0;
+}
+
+/* Brutalist popup — sharp corners, thick border */
+.leaflet-popup-content-wrapper {
+  border-radius: 0 !important;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.15) !important;
+  border: 2px solid #0a0a0a !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+  font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+}
+
+.leaflet-popup-tip {
+  box-shadow: none !important;
+  border: 2px solid #0a0a0a !important;
+  border-top: none !important;
+  border-left: none !important;
+}
+
+.leaflet-popup-close-button {
+  font-size: 18px !important;
+  color: #0a0a0a !important;
+}
+
+/* Neon dot markers — no default leaflet chrome */
+.leaflet-marker-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Zoom controls — brutalist */
+.leaflet-control-zoom {
+  border: 2px solid #0a0a0a !important;
+  border-radius: 0 !important;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.12) !important;
+}
+
+.leaflet-control-zoom a {
+  border-radius: 0 !important;
+  border-bottom: 1px solid #0a0a0a !important;
+  color: #2E6A4A !important;
+  font-weight: 600 !important;
+  width: 32px !important;
+  height: 32px !important;
+  line-height: 30px !important;
+  font-size: 16px !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #2E6A4A !important;
+  color: #D3E4D7 !important;
+}
+
+.leaflet-control-zoom a:last-child {
+  border-bottom: none !important;
+}
+
+/* Attribution — minimal */
+.leaflet-control-attribution {
+  font-size: 9px !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+  padding: 2px 6px !important;
+  border-radius: 0 !important;
+}

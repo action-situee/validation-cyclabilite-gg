@@ -1,0 +1,24 @@
+node_modules/
+dist/
+.wrangler/
+
+.DS_Store
+*.log
+
+.env
+.env.*
+!.env.example
+
+mock-api-data/*.json
+public/data/atlas/
+public/tiles/
+
+Portail web collaboratif/node_modules/
+Portail web collaboratif/dist/
+
+copie-atlas-marchabilite-cyclabilite/node_modules/
+copie-atlas-marchabilite-cyclabilite/dist/
+copie-atlas-marchabilite-cyclabilite/build/
+copie-atlas-marchabilite-cyclabilite/data_raw/
+copie-atlas-marchabilite-cyclabilite/data_tiles/
+copie-atlas-marchabilite-cyclabilite/public/tiles/

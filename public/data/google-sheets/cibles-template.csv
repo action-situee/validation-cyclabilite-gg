@@ -1,0 +1,5 @@
+cible_id,faisceau_id,faisceau_nom,theme_principal,latitude,longitude,titre_affichage,sous_titre_affichage,question_cle,score,classe
+PS_001,plo_stjulien,Saint-Julien - PLO - Geneve,equipements,46.1432,6.0835,Parking velo gare routiere St-Julien,Stationnement securise absent,Le stationnement velo est-il suffisant ?,1.8,tres_faible
+PS_007,plo_stjulien,Saint-Julien - PLO - Geneve,continuite,46.1680,6.1110,Discontinuite Route de Saconnex-d'Arve,Rupture majeure de la piste,La continuite cyclable est-elle assuree ?,2.2,faible
+TG_003,thonex_gaillard,Gaillard - Thonex - Eaux-Vives,permeabilite_frontiere,46.1985,6.2220,Passage frontiere Moillesulaz,,La permeabilite frontaliere est-elle suffisante ?,2.3,faible
+TG_006,thonex_gaillard,Gaillard - Thonex - Eaux-Vives,intersections,46.2028,6.1940,Carrefour Gradelle / Route de Chene,,La gestion de cette intersection est-elle securisee ?,3.1,moyen
