@@ -198,7 +198,7 @@ export function QuickAddForm({ latitude, longitude, cible, segment, onSubmit, on
                 <>
                   <h2 className="text-[12px] uppercase tracking-wider truncate">Segment {segment.segment_id}</h2>
                   <p className="text-[10px] text-[#999] font-mono">
-                    {segment.corridor_name} · indice {segment.bike_index?.toFixed(2) ?? 'n/a'} · {segment.bike_index_class.replace(/_/g, ' ')}
+                    {segment.corridor_name} · indice {(segment.bike_index ?? 0).toFixed(2)} · {segment.bike_index_class.replace(/_/g, ' ')}
                   </p>
                 </>
               ) : (

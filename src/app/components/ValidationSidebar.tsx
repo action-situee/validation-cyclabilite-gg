@@ -11,12 +11,12 @@ import {
   Eye,
   EyeOff,
   Download,
-  Info,
 } from 'lucide-react';
 import type { CommentaireGeneral } from '../types';
 import type { Faisceau } from '../types';
 import { Button } from './ui/Button';
 import { CIBLE_THEMES, OBS_CATEGORIES } from '../config/palette';
+import { InfoTip } from './InfoTip';
 
 function CrossSwatch({ color, active }: { color: string; active: boolean }) {
   return (
@@ -38,20 +38,6 @@ function CrossSwatch({ color, active }: { color: string; active: boolean }) {
           transform: 'rotate(-45deg)',
         }}
       />
-    </span>
-  );
-}
-
-function InfoTip({ text }: { text: string }) {
-  return (
-    <span className="relative group inline-flex ml-1">
-      <Info className="w-3 h-3 text-[#ccc] group-hover:text-[#2E6A4A] transition-colors cursor-help" />
-      <span
-        className="absolute left-0 bottom-full mb-1.5 hidden group-hover:block z-50 w-56 px-2.5 py-2 bg-[#2E6A4A] text-[#D3E4D7] text-[10px] leading-snug border border-[#0a0a0a] pointer-events-none"
-        style={{ boxShadow: '3px 3px 0 rgba(0,0,0,0.15)' }}
-      >
-        {text}
-      </span>
     </span>
   );
 }

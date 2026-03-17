@@ -1,23 +1,10 @@
 import React from 'react';
-import { Bike, ChevronDown, Info } from 'lucide-react';
+import { Bike, ChevronDown } from 'lucide-react';
 import type { BikeSegment } from '../types';
 import { HoveredSegmentCard } from './HoveredSegmentCard';
 import type { BikeMetricKey } from '../config/bikeMetrics';
 import { BASEMAP_OPTIONS, type BasemapMode } from '../config/basemaps';
-
-function InfoTip({ text }: { text: string }) {
-  return (
-    <span className="relative group inline-flex ml-1">
-      <Info className="w-3 h-3 text-[#ccc] group-hover:text-[#2E6A4A] transition-colors cursor-help" />
-      <span
-        className="absolute right-0 bottom-full mb-1.5 hidden group-hover:block z-50 w-56 px-2.5 py-2 bg-[#2E6A4A] text-[#D3E4D7] text-[10px] leading-snug border border-[#0a0a0a] pointer-events-none"
-        style={{ boxShadow: '3px 3px 0 rgba(0,0,0,0.15)' }}
-      >
-        {text}
-      </span>
-    </span>
-  );
-}
+import { InfoTip } from './InfoTip';
 
 interface SidebarProps {
   className?: string;

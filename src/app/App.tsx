@@ -6,7 +6,7 @@ import { Sidebar } from './components/Sidebar';
 import { ValidationSidebar } from './components/ValidationSidebar';
 import { Button } from './components/ui/Button';
 import type { BikeSegment, Cible, ObservationLibre, CommentaireGeneral } from './types';
-import { BIKE_METRIC_BY_KEY, VALUE_THRESHOLDS, type BikeMetricKey } from './config/bikeMetrics';
+import { VALUE_THRESHOLDS, type BikeMetricKey } from './config/bikeMetrics';
 import { DEFAULT_BASEMAP, type BasemapMode } from './config/basemaps';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from './mock-data/faisceaux';
 import { exportGeoJSON, exportCSV } from './utils/export';
@@ -26,7 +26,7 @@ const SurveyModal = lazy(() =>
   import('./components/SurveyModal').then((module) => ({ default: module.SurveyModal })),
 );
 
-type SidebarMode = 'left' | 'right' | 'both';
+type SidebarMode = 'none' | 'left' | 'right' | 'both';
 
 function AppInner() {
   const {
@@ -161,10 +161,16 @@ function AppInner() {
     setAddMode(false);
   }, []);
 
-  const handleMapClick = useCallback((lat: number, lng: number) => {
-    setPendingPoint({ lat, lng });
-    setSelectedSegment(null);
+  const handleMapClick = useCallback((lat: number, lng: number, segment?: BikeSegment | null) => {
+    setPendingPoint({ lat, lng, segment: segment || undefined });
+    setSelectedCible(null);
+    setThreadCible(null);
+    setSelectedSegment(segment || null);
     setAddMode(false);
+  }, []);
+
+  const handleMapBackgroundClick = useCallback(() => {
+    setSelectedSegment(null);
   }, []);
 
   const handleHoverSegment = useCallback((segment: BikeSegment | null) => {
@@ -277,10 +283,13 @@ function AppInner() {
   const shouldPulseAddButton = Boolean(selectedSegment && !pendingPoint && !addMode);
 
   const handleSelectSidebarMode = useCallback((mode: SidebarMode) => {
-    setSidebarMode(mode);
-    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
-      setMobileSidebarVisible(true);
-    }
+    setSidebarMode((previous) => {
+      const nextMode = previous === mode ? 'none' : mode;
+      if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+        setMobileSidebarVisible(nextMode !== 'none');
+      }
+      return nextMode;
+    });
   }, []);
 
   const handleAddButtonClick = useCallback(() => {
@@ -363,11 +372,11 @@ function AppInner() {
         <div className="flex items-center gap-4 min-w-0">
           <Bike className="w-5 h-5 text-[#2E6A4A]" />
           <div className="min-w-0">
-            <p className="text-[11px] text-[#5c5c5c] tracking-wide font-mono truncate">
-              {BIKE_METRIC_BY_KEY[selectedMetric].label}
-              {' · '}
-              {filteredCibles.length} point{filteredCibles.length > 1 ? 's' : ''}
-              {filteredObservations.length > 0 && <> · {filteredObservations.length} retour{filteredObservations.length > 1 ? 's' : ''}</>}
+            <h1 className="text-[14px] leading-tight text-[#0a0a0a] uppercase tracking-[0.08em]">
+              Validation de l&apos;indice de cyclabilite
+            </h1>
+            <p className="text-[10px] leading-tight text-[#5c5c5c] uppercase tracking-[0.12em]">
+              sur deux faisceaux transfrontaliers
             </p>
           </div>
         </div>
@@ -429,7 +438,7 @@ function AppInner() {
       {/* Bandeau mode ajout */}
       {addMode && (
         <div className="bg-[#2E6A4A] text-[#D3E4D7] px-4 py-2 text-[11px] uppercase tracking-[0.15em] text-center shrink-0 z-10 border-b-2 border-[#0a0a0a]">
-          Cliquez sur une ligne coloree pour valider un segment, ou ailleurs sur la carte pour un point libre
+          Cliquez sur la carte pour ajouter un point rattache au troncon visible le plus proche
         </div>
       )}
 
@@ -469,6 +478,7 @@ function AppInner() {
               onCibleClick={handleCibleClick}
               onSegmentClick={handleSegmentClick}
               onHoverSegment={handleHoverSegment}
+              onMapBackgroundClick={handleMapBackgroundClick}
               addMode={addMode}
               onMapClick={handleMapClick}
               flyTo={flyTo}
@@ -580,7 +590,7 @@ function AppInner() {
                 <ol className="text-[12px] text-[#5c5c5c] space-y-1.5 list-decimal list-inside leading-relaxed">
                   <li><strong className="text-[#2E6A4A]">Repondre au questionnaire</strong> via l&apos;icone <ClipboardCheck className="w-3.5 h-3.5 inline text-[#2E6A4A] -mt-0.5" /> dans la barre superieure.</li>
                   <li><strong className="text-[#2E6A4A]">Commenter un point d&apos;attention</strong> en cliquant sur une pastille coloree deja presente sur la carte.</li>
-                  <li><strong className="text-[#2E6A4A]">Ajouter une remontee libre</strong> avec <strong className="text-[#2E6A4A]">+ Ajouter</strong>, soit sur un segment pour valider l&apos;indice, soit ailleurs pour un point libre.</li>
+                  <li><strong className="text-[#2E6A4A]">Ajouter une remontee libre</strong> avec <strong className="text-[#2E6A4A]">+ Ajouter</strong>, puis cliquer sur la carte pour rattacher le point au troncon visible le plus proche.</li>
                 </ol>
               </div>
 

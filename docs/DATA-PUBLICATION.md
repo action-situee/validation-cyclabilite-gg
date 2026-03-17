@@ -1,98 +1,99 @@
 # Publication Des Donnees
 
-## Donnees prêtes dans le repo
+## Donnees que le portail sait lire
 
-Le portail peut deja tourner sans service externe grace a:
+### 1. Indice de cyclabilite
+
+Le front attend une tuile vectorielle PMTiles, pas un parquet brut:
+
+- `VITE_PM_TILES_BIKE_SEGMENT`
+- `VITE_BIKE_SOURCE_LAYER`
+
+Le brut reste dans l'atlas `copie-atlas-marchabilite-cyclabilite/` puis passe par le pipeline atlas. Pour le portail, il faut publier:
+
+- `bike_agglo_segment.pmtiles`
+- `bike-metric-quantiles.json`
+
+### 2. Corridors
+
+Format: GeoJSON `Polygon` ou `MultiPolygon`.
+
+Chemin local par defaut:
 
 - `public/data/corridors.geojson`
-- `public/data/atlas/bike-segments.geojson`
+
+Override possible:
+
+- `VITE_CORRIDORS_GEOJSON_URL`
+
+Proprietes utiles par feature:
+
+- `id`
+- `nom`
+- `color`
+- `center_lat`
+- `center_lng`
+- `zoom`
+
+### 3. Points d'attention
+
+Deux options:
+
+- `VITE_CIBLES_GEOJSON_URL` vers un GeoJSON `Point`
+- `VITE_CIBLES_SHEETS_CSV_URL` vers un Google Sheet publie en CSV
+
+Colonnes attendues pour le CSV:
+
+- `cible_id`
+- `faisceau_id`
+- `faisceau_nom`
+- `theme_principal`
+- `latitude`
+- `longitude`
+- `titre_affichage`
+- `score`
+- `classe`
+
+Template fourni:
+
 - `public/data/google-sheets/cibles-template.csv`
-- `public/data/google-sheets/questionnaire-template.csv`
-- `public/data/google-sheets/remontees-template.csv`
 
-## Lecture depuis Google Sheets
+## Lecture / ecriture des contributions
 
-Pour les cibles, le front supporte deja un CSV publie via:
+Le front lit et ecrit via `VITE_CONTRIBUTIONS_API_BASE`, par defaut `/api`.
 
-- `VITE_CIBLES_SHEETS_CSV_URL`
+Routes attendues:
 
-Utilisez `public/data/google-sheets/cibles-template.csv` comme schema de colonnes.
+- `GET/POST/PUT/DELETE /observations`
+- `GET/POST/DELETE /commentaires`
+- `GET/POST /surveys`
 
-Procedure:
+Important:
 
-1. creez un Google Sheet avec exactement ces colonnes
-2. remplissez ou collez vos cibles
-3. `File -> Share -> Publish to web`
-4. choisissez `CSV`
-5. placez l'URL publiee dans `.env.local`:
+- un Google Sheet publie en CSV est seulement lisible
+- pour ecrire les retours utilisateurs, il faut une API intermediaire
+- cette API peut ensuite ecrire dans Sheets, Airtable, Notion, Postgres, etc.
 
-```env
-VITE_CIBLES_SHEETS_CSV_URL=https://docs.google.com/spreadsheets/d/e/.../pub?output=csv
-```
-
-## Ecriture simple pour les retours utilisateurs
-
-Le front ecrit vers `VITE_CONTRIBUTIONS_API_BASE`, par defaut `/api`.
-
-En local:
-
-- `/api/observations`
-- `/api/commentaires`
-- `/api/surveys`
-
-En deploiement, remplacez cette base par:
-
-- un backend serverless maison
-- une fonction Cloudflare / Vercel / Netlify
-- ou un Google Apps Script qui respecte les memes chemins
-
-Exemple:
-
-```env
-VITE_CONTRIBUTIONS_API_BASE=https://script.google.com/macros/s/DEPLOYMENT_ID/exec
-```
-
-## Contrat attendu pour un backend externe
-
-### Observations
-
-- `GET /observations` -> liste JSON
-- `POST /observations` -> cree une observation
-- `PUT /observations/:id` -> met a jour une observation
-- `DELETE /observations/:id` -> supprime une observation
-
-### Commentaires
-
-- `GET /commentaires`
-- `POST /commentaires`
-- `DELETE /commentaires/:id`
-
-### Questionnaire
-
-- `GET /surveys`
-- `POST /surveys`
-
-## Regeneration des segments atlas
-
-Le fichier `public/data/atlas/bike-segments.geojson` est genere depuis:
-
-- `copie-atlas-marchabilite-cyclabilite/data_tiles/tmp/bike_agglo_segment.ndjson`
-
-Commande:
+## Regenerer les fichiers publics depuis l'atlas
 
 ```bash
 npm run data:prepare
 ```
 
-Le resume du filtrage est dans:
+Le script lit les sorties atlas preparees et regenere:
 
+- `public/data/atlas/bike-segments.geojson`
 - `public/data/atlas/bike-segments-summary.json`
+- `public/data/atlas/bike-metric-quantiles.json`
 
-## Variables d'environnement utiles
+## Variables utiles
 
 ```env
-VITE_CORRIDORS_GEOJSON_URL=/data/corridors.geojson
 VITE_PM_TILES_BIKE_SEGMENT=https://.../bike_agglo_segment.pmtiles
+VITE_PM_TILES_PERIMETER=https://.../canton_perimeter.pmtiles
+VITE_BIKE_SOURCE_LAYER=bikenet
+VITE_PERIMETER_SOURCE_LAYER=canton_perimeter
+VITE_CORRIDORS_GEOJSON_URL=/data/corridors.geojson
 VITE_CIBLES_GEOJSON_URL=
 VITE_CIBLES_SHEETS_CSV_URL=
 VITE_CONTRIBUTIONS_API_BASE=/api
