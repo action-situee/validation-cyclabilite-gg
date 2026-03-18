@@ -1,11 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { Cible, Faisceau, ObservationLibre, CommentaireGeneral } from '../types';
 import { FAISCEAUX as MOCK_FAISCEAUX } from '../mock-data/faisceaux';
-import { mockCibles } from '../mock-data/cibles';
 import { storageService } from '../utils/storage';
 import { resolveFingerprint } from '../utils/fingerprint';
 import {
-  loadCibles,
   loadCommentairesFromSheet,
   loadCorridors,
   loadObservationsFromSheet,
@@ -18,9 +16,11 @@ interface AppDataContextType {
   observations: ObservationLibre[];
   commentaires: CommentaireGeneral[];
   addObservation: (obs: ObservationLibre) => string;
+  addObservationComment: (observationId: string, texte: string) => void;
   deleteObservation: (id: string) => void;
   voteObservation: (id: string, direction: 'up' | 'down', voterId: string) => void;
   addCommentaire: (com: CommentaireGeneral) => string;
+  updateCommentaire: (com: CommentaireGeneral) => void;
   deleteCommentaire: (id: string) => void;
   getObservationsForCible: (cibleId: string) => ObservationLibre[];
   isOwnObservation: (id: string) => boolean;
@@ -31,8 +31,15 @@ interface AppDataContextType {
 
 const AppDataContext = createContext<AppDataContextType | null>(null);
 
+function mergeById<T extends { id: string }>(base: T[], local: T[]) {
+  const map = new Map<string, T>();
+  base.forEach((item) => map.set(item.id, item));
+  local.forEach((item) => map.set(item.id, item));
+  return [...map.values()];
+}
+
 export function AppDataProvider({ children }: { children: ReactNode }) {
-  const [cibles, setCibles] = useState<Cible[]>(mockCibles);
+  const [cibles] = useState<Cible[]>([]);
   const [faisceaux, setFaisceaux] = useState<Faisceau[]>(MOCK_FAISCEAUX);
   const [observations, setObservations] = useState<ObservationLibre[]>([]);
   const [commentaires, setCommentaires] = useState<CommentaireGeneral[]>([]);
@@ -45,27 +52,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Load external data (GeoJSON / Sheets) – falls back to mock
+  // Load corridors
   useEffect(() => {
     loadCorridors().then((ext) => {
       if (ext && ext.length > 0) setFaisceaux(ext);
     });
-    loadCibles().then((ext) => {
-      if (ext && ext.length > 0) setCibles(ext);
-    });
   }, []);
 
   useEffect(() => {
-    loadObservationsFromSheet().then((remote) => {
-      if (remote && remote.length > 0) {
-        setObservations(remote);
-      }
-    });
-
-    loadCommentairesFromSheet().then((remote) => {
-      if (remote && remote.length > 0) {
-        setCommentaires(remote);
-      }
+    Promise.all([loadObservationsFromSheet(), loadCommentairesFromSheet()]).then(([remoteObservations, remoteCommentaires]) => {
+      setObservations(
+        mergeById(remoteObservations || [], storageService.getAllObservations()),
+      );
+      setCommentaires(
+        mergeById(remoteCommentaires || [], storageService.getAllCommentaires()),
+      );
     });
   }, []);
 
@@ -74,6 +75,31 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setObservations((prev) => [...prev, saved]);
     void contributionsApi.createObservation(saved);
     return saved.id;
+  }, []);
+
+  const addObservationComment = useCallback((observationId: string, texte: string) => {
+    const now = new Date();
+    setObservations((prev) => prev.map((observation) => {
+      if (observation.id !== observationId) return observation;
+
+      const updated: ObservationLibre = {
+        ...observation,
+        commentaires: [
+          ...(observation.commentaires || []),
+          {
+            id: `OBS_COM_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            texte,
+            auteur: 'Anonyme',
+            date: now.toISOString().slice(0, 10),
+            heure: now.toTimeString().slice(0, 8),
+          },
+        ],
+      };
+
+      storageService.updateObservation(updated);
+      void contributionsApi.updateObservation(updated);
+      return updated;
+    }));
   }, []);
 
   const deleteObservation = useCallback((id: string) => {
@@ -103,6 +129,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setCommentaires((prev) => [...prev, saved]);
     void contributionsApi.createCommentaire(saved);
     return saved.id;
+  }, []);
+
+  const updateCommentaire = useCallback((com: CommentaireGeneral) => {
+    storageService.updateCommentaire(com);
+    setCommentaires((prev) => prev.map((item) => (item.id === com.id ? com : item)));
   }, []);
 
   const deleteCommentaire = useCallback((id: string) => {
@@ -138,9 +169,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         observations,
         commentaires,
         addObservation,
+        addObservationComment,
         deleteObservation,
         voteObservation,
         addCommentaire,
+        updateCommentaire,
         deleteCommentaire,
         getObservationsForCible,
         isOwnObservation,
@@ -165,9 +198,11 @@ export function useAppData() {
       observations: [] as ObservationLibre[],
       commentaires: [] as CommentaireGeneral[],
       addObservation: (() => '') as (obs: ObservationLibre) => string,
+      addObservationComment: (() => {}) as (observationId: string, texte: string) => void,
       deleteObservation: (() => {}) as (id: string) => void,
       voteObservation: (() => {}) as (id: string, direction: 'up' | 'down', voterId: string) => void,
       addCommentaire: (() => '') as (com: CommentaireGeneral) => string,
+      updateCommentaire: (() => {}) as (com: CommentaireGeneral) => void,
       deleteCommentaire: (() => {}) as (id: string) => void,
       getObservationsForCible: (() => []) as (cibleId: string) => ObservationLibre[],
       isOwnObservation: (() => false) as (id: string) => boolean,

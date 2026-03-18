@@ -1,5 +1,5 @@
-id,auteur,texte,date,faisceau_id
-COM_001,Coordination corridor sud,Verifier les sections proches de Bardonnex ou la perception de securite varie fortement,2026-03-17,plo_stjulien
-COM_002,Association velo Sud,Les points d attention lies aux transitions de frontiere doivent etre prioritaires dans la revue,2026-03-17,plo_stjulien
-COM_003,Coordination corridor est,Le corridor est semble lisible mais plusieurs carrefours restent a commenter finement,2026-03-16,thonex_gaillard
-COM_004,Collectif est,Prioriser les points d attention autour de Thonex et de l arrivee a Gaillard,2026-03-16,thonex_gaillard
+id,auteur,texte,date,heure,faisceau_id
+COM_001,Coordination corridor sud,Verifier les sections proches de Bardonnex ou la perception de securite varie fortement,2026-03-17,08:30:00,plo_stjulien
+COM_002,Association velo Sud,Les transitions de frontiere restent un point prioritaire dans la relecture de l indice,2026-03-17,11:10:00,plo_stjulien
+COM_003,Coordination corridor est,Le corridor est semble lisible mais plusieurs carrefours restent a commenter finement,2026-03-16,09:20:00,thonex_gaillard
+COM_004,Collectif est,Prioriser les approches de Thonex et l arrivee a Gaillard dans la prochaine iteration,2026-03-16,16:40:00,thonex_gaillard

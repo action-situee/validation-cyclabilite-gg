@@ -85,12 +85,16 @@ export const storageService = {
   saveObservation(obs: ObservationLibre): ObservationLibre {
     const fp = getFingerprint();
     const all = this.getAllObservations();
+    const now = new Date();
     const saved: ObservationLibre = {
       ...obs,
       id: obs.id || `OBS_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      date: obs.date || now.toISOString().slice(0, 10),
+      heure: obs.heure || now.toTimeString().slice(0, 8),
       upvotes: obs.upvotes ?? 0,
       downvotes: obs.downvotes ?? 0,
       votedBy: obs.votedBy ?? [],
+      commentaires: obs.commentaires ?? [],
       owner_fingerprint: fp,
     };
     all.push(saved);
@@ -110,6 +114,7 @@ export const storageService = {
         upvotes: o.upvotes ?? 0,
         downvotes: o.downvotes ?? 0,
         votedBy: o.votedBy ?? [],
+        commentaires: Array.isArray(o.commentaires) ? o.commentaires : [],
       }));
     } catch {
       return [];
@@ -137,9 +142,13 @@ export const storageService = {
   saveCommentaire(com: CommentaireGeneral): CommentaireGeneral {
     const fp = getFingerprint();
     const all = this.getAllCommentaires();
+    const now = new Date();
     const saved = {
       ...com,
       id: com.id || `COM_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      auteur: com.auteur || 'Anonyme',
+      date: com.date || now.toISOString().slice(0, 10),
+      heure: com.heure || now.toTimeString().slice(0, 8),
       owner_fingerprint: fp,
     };
     all.push(saved);
@@ -159,6 +168,13 @@ export const storageService = {
 
   replaceAllCommentaires(commentaires: CommentaireGeneral[]): void {
     localStorage.setItem(COM_KEY, JSON.stringify(commentaires));
+  },
+
+  updateCommentaire(updated: CommentaireGeneral): void {
+    const all = this.getAllCommentaires().map((c) =>
+      c.id === updated.id ? updated : c
+    );
+    localStorage.setItem(COM_KEY, JSON.stringify(all));
   },
 
   deleteCommentaire(id: string): void {

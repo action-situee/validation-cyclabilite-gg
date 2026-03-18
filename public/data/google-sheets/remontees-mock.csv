@@ -1,6 +1,6 @@
-id,type,auteur,organisation,faisceau_id,segment_id,cible_id,latitude,longitude,indice_juge,commentaire,date
-OBS_001,validation,Association velo Sud,Pro Velo locale,plo_stjulien,SEG_PLO_1042,PS_002,46.1505,6.0955,trop_eleve,Le passage frontalier reste plus stressant que le score actuel ne le laisse penser,2026-03-17
-OBS_002,amenagement,Camille R.,Habitante,plo_stjulien,SEG_PLO_1187,PS_004,46.1680,6.1110,,Ajouter un marquage plus lisible et traiter la rupture de piste au carrefour,2026-03-17
-OBS_003,positif,Nicolas T.,Collectif local,thonex_gaillard,SEG_EST_2203,TG_003,46.2005,6.2090,,Le confort est bon hors heure de pointe et le corridor reste lisible,2026-03-16
-OBS_004,danger,Equipe terrain est,Diagnostic corridor,thonex_gaillard,SEG_EST_2316,TG_001,46.1940,6.2310,,Conflit frequent avec les tourne a droite a l entree du giratoire,2026-03-16
-OBS_005,validation,Coordination corridor est,Association locale,thonex_gaillard,412830,TG_004,46.2028,6.1940,trop_faible,Le score devrait etre un peu meilleur sur cette section une fois le trafic calme,2026-03-15
+id,type_retour,type_retour_autre,classes_concernees,auteur,organisation,faisceau_id,segment_id,latitude,longitude,indice_juge,commentaire,date,heure,commentaires_json,upvotes,downvotes,photos
+OBS_001,securite_intersections,,securite|infrastructure,Association velo Sud,Pro Velo locale,plo_stjulien,SEG_PLO_1042,46.1505,6.0955,sur_estime,Le passage frontalier reste plus stressant que le score actuel ne le laisse penser,2026-03-17,09:10:00,,3,0,
+OBS_002,bande_piste,,infrastructure|confort,Camille R.,Habitante,plo_stjulien,SEG_PLO_1187,46.1680,6.1110,adapte,Ajouter un marquage plus lisible et traiter la rupture de piste au carrefour,2026-03-17,11:35:00,,1,0,
+OBS_003,maillage_alternative,,attractivite|confort,Nicolas T.,Collectif local,thonex_gaillard,SEG_EST_2203,46.2005,6.2090,adapte,Le corridor est lisible mais il manque des continuites plus claires vers les alternatives locales,2026-03-16,17:20:00,,2,0,
+OBS_004,giratoire,,securite,Equipe terrain est,Diagnostic corridor,thonex_gaillard,SEG_EST_2316,46.1940,6.2310,sous_estime,Conflit frequent avec les tourne a droite a l entree du giratoire,2026-03-16,08:45:00,,4,1,
+OBS_005,permeabilite_frontiere,,securite|attractivite,Coordination corridor est,Association locale,thonex_gaillard,412830,46.2028,6.1940,sur_estime,Le franchissement et ses approches restent moins confortables que ce que l indice laisse penser,2026-03-15,14:05:00,,2,0,

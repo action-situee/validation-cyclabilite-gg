@@ -24,6 +24,7 @@ interface MapProps {
   basemap: BasemapMode;
   onBasemapChange: (basemap: BasemapMode) => void;
   onCibleClick: (cible: Cible) => void;
+  onObservationClick?: (observation: ObservationLibre) => void;
   onSegmentClick: (segment: BikeSegment) => void;
   onHoverSegment: (segment: BikeSegment | null) => void;
   onMapBackgroundClick?: () => void;
@@ -244,9 +245,7 @@ function buildPointMarkerElement(options: {
   variant: 'cible' | 'observation';
   selected?: boolean;
 }) {
-  const markerSize = options.variant === 'observation'
-    ? Math.max(options.size + 2, Math.round(options.size * 1.2))
-    : options.size;
+  const markerSize = options.size;
   const element = document.createElement('button');
   element.type = 'button';
   element.setAttribute('aria-label', 'Point sur la carte');
@@ -280,23 +279,8 @@ function buildPointMarkerElement(options: {
       shape.style.boxShadow = '0 0 0 3px rgba(255,214,10,0.7)';
     }
   } else {
-    const armLength = Math.max(10, Math.round(markerSize * 0.78));
-    const armThickness = Math.max(2, Math.round(markerSize * 0.14));
-    const armA = document.createElement('span');
-    armA.style.position = 'absolute';
-    armA.style.left = '50%';
-    armA.style.top = '50%';
-    armA.style.width = `${armLength}px`;
-    armA.style.height = `${armThickness}px`;
-    armA.style.background = options.color;
-    armA.style.borderRadius = '999px';
-    armA.style.transform = 'translate(-50%, -50%) rotate(45deg)';
-
-    const armB = armA.cloneNode() as HTMLSpanElement;
-    armB.style.transform = 'translate(-50%, -50%) rotate(-45deg)';
-
-    shape.appendChild(armA);
-    shape.appendChild(armB);
+    shape.style.background = options.color;
+    shape.style.borderRadius = '999px';
   }
 
   element.appendChild(shape);
@@ -787,6 +771,7 @@ function MapInner({
   basemap,
   onBasemapChange,
   onCibleClick,
+  onObservationClick,
   onSegmentClick,
   onHoverSegment,
   onMapBackgroundClick,
@@ -815,6 +800,7 @@ function MapInner({
   const cursorPositionRef = useRef<{ lng: number; lat: number } | null>(null);
   const originalLabelFieldsRef = useRef<Record<string, unknown>>({});
   const onCibleClickRef = useRef(onCibleClick);
+  const onObservationClickRef = useRef(onObservationClick);
   const onBasemapChangeRef = useRef(onBasemapChange);
   const onSegmentClickRef = useRef(onSegmentClick);
   const onHoverSegmentRef = useRef(onHoverSegment);
@@ -850,6 +836,10 @@ function MapInner({
   useEffect(() => {
     onCibleClickRef.current = onCibleClick;
   }, [onCibleClick]);
+
+  useEffect(() => {
+    onObservationClickRef.current = onObservationClick;
+  }, [onObservationClick]);
 
   useEffect(() => {
     onBasemapChangeRef.current = onBasemapChange;
@@ -1599,8 +1589,7 @@ function MapInner({
     onHoverSegmentRef.current(null);
 
     try {
-      map.setStyle(resolveBasemapStyle(basemap) as any);
-      waitForStyleReady(map, () => {
+      map.once('style.load', () => {
         if (mapRef.current !== map) return;
         try {
           ensureMapSourcesAndLayers(map);
@@ -1612,6 +1601,7 @@ function MapInner({
           setMapError(true);
         }
       });
+      map.setStyle(resolveBasemapStyle(basemap) as any);
     } catch (error) {
       console.error(error);
       setMapError(true);
@@ -1702,11 +1692,16 @@ function MapInner({
       if (!Number.isFinite(observation.longitude) || !Number.isFinite(observation.latitude)) return;
 
       const element = buildPointMarkerElement({
-        color: OBS_NEON[observation.categorie] || '#8338ec',
-        size: 12,
+        color: '#7b2ff7',
+        size: 14,
         variant: 'observation',
       });
       element.title = observation.commentaire;
+      element.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onObservationClickRef.current?.(observation);
+      });
 
       const marker = new maplibregl.Marker({
         element,

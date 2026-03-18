@@ -24,6 +24,7 @@ const env = import.meta.env as Record<string, string | undefined>;
 const DEFAULT_CIBLES_SHEETS_CSV_URL = '/data/google-sheets/cibles-mock.csv';
 const DEFAULT_OBSERVATIONS_SHEETS_CSV_URL = '/data/google-sheets/remontees-mock.csv';
 const DEFAULT_COMMENTAIRES_SHEETS_CSV_URL = '/data/google-sheets/commentaires-mock.csv';
+const LOCAL_MOCKS_ONLY = true;
 
 // ─────────────────────────────────────────────────
 // SOURCES DE DONNÉES – à configurer ici
@@ -53,7 +54,7 @@ export const CORRIDORS_GEOJSON_URL = env.VITE_CORRIDORS_GEOJSON_URL || '/data/co
  * Propriétés optionnelles :
  *   sous_titre_affichage, question_cle
  */
-export const CIBLES_GEOJSON_URL = env.VITE_CIBLES_GEOJSON_URL || '';
+export const CIBLES_GEOJSON_URL = '';
 
 /**
  * URL du Google Sheet publié en CSV pour les points d'attention.
@@ -66,19 +67,25 @@ export const CIBLES_GEOJSON_URL = env.VITE_CIBLES_GEOJSON_URL || '';
  * Colonnes facultatives :
  *   sous_titre_affichage, question_cle
  */
-export const CIBLES_SHEETS_CSV_URL = env.VITE_CIBLES_SHEETS_CSV_URL || DEFAULT_CIBLES_SHEETS_CSV_URL;
+export const CIBLES_SHEETS_CSV_URL = LOCAL_MOCKS_ONLY
+  ? DEFAULT_CIBLES_SHEETS_CSV_URL
+  : env.VITE_CIBLES_SHEETS_CSV_URL || DEFAULT_CIBLES_SHEETS_CSV_URL;
 
 /**
  * URL du CSV local des retours terrain.
  */
 export const OBSERVATIONS_SHEETS_CSV_URL =
-  env.VITE_OBSERVATIONS_SHEETS_CSV_URL || DEFAULT_OBSERVATIONS_SHEETS_CSV_URL;
+  LOCAL_MOCKS_ONLY
+    ? DEFAULT_OBSERVATIONS_SHEETS_CSV_URL
+    : env.VITE_OBSERVATIONS_SHEETS_CSV_URL || DEFAULT_OBSERVATIONS_SHEETS_CSV_URL;
 
 /**
  * URL du CSV local des commentaires generaux.
  */
 export const COMMENTAIRES_SHEETS_CSV_URL =
-  env.VITE_COMMENTAIRES_SHEETS_CSV_URL || DEFAULT_COMMENTAIRES_SHEETS_CSV_URL;
+  LOCAL_MOCKS_ONLY
+    ? DEFAULT_COMMENTAIRES_SHEETS_CSV_URL
+    : env.VITE_COMMENTAIRES_SHEETS_CSV_URL || DEFAULT_COMMENTAIRES_SHEETS_CSV_URL;
 
 /**
  * URL du GeoJSON segmentaire derive de l'atlas.
@@ -147,14 +154,79 @@ function toOptionalNumber(value: string) {
 function normalizeObservationCategory(value: string) {
   const normalized = value.trim();
   if (
+    normalized === 'securite_intersections' ||
+    normalized === 'giratoire' ||
+    normalized === 'maillage_alternative' ||
+    normalized === 'equipement' ||
+    normalized === 'permeabilite_frontiere' ||
+    normalized === 'bande_piste' ||
+    normalized === 'conflits_usage' ||
+    normalized === 'autre'
+  ) {
+    return normalized;
+  }
+
+  if (
     normalized === 'validation' ||
     normalized === 'danger' ||
     normalized === 'amenagement' ||
     normalized === 'positif'
   ) {
+    return 'autre';
+  }
+
+  return 'autre';
+}
+
+function normalizeIndiceFeedback(value: string): ObservationLibre['indice_juge'] | undefined {
+  const normalized = value.trim();
+  if (
+    normalized === 'adapte' ||
+    normalized === 'sur_estime' ||
+    normalized === 'sous_estime'
+  ) {
     return normalized;
   }
-  return 'validation';
+
+  if (normalized === 'juste') return 'adapte';
+  if (normalized === 'trop_eleve') return 'sur_estime';
+  if (normalized === 'trop_faible') return 'sous_estime';
+
+  return undefined;
+}
+
+function parseListColumn(value: string) {
+  return value
+    .split(/[|;,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseObservationComments(value: string): ObservationLibre['commentaires'] {
+  const normalized = value.trim();
+  if (!normalized) return [];
+
+  try {
+    const parsed = JSON.parse(normalized);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item) => {
+      if (!item || typeof item !== 'object') return [];
+      return [{
+        id: String((item as { id?: unknown }).id || `OBS_COM_${Math.random().toString(36).slice(2, 9)}`),
+        texte: String((item as { texte?: unknown }).texte || ''),
+        auteur: toOptionalString(String((item as { auteur?: unknown }).auteur || '')),
+        date: String((item as { date?: unknown }).date || new Date().toISOString().slice(0, 10)),
+        heure: toOptionalString(String((item as { heure?: unknown }).heure || '')),
+      }];
+    });
+  } catch {
+    return parseListColumn(normalized).map((texte, index) => ({
+      id: `OBS_COM_${index + 1}`,
+      texte,
+      auteur: 'Anonyme',
+      date: new Date().toISOString().slice(0, 10),
+    }));
+  }
 }
 
 
@@ -362,19 +434,27 @@ export async function loadObservationsFromSheet(): Promise<ObservationLibre[] | 
         latitude,
         longitude,
         commentaire: getCSVColumn(row, parsed.headers, 'commentaire'),
-        categorie: normalizeObservationCategory(getCSVColumn(row, parsed.headers, 'type')),
+        categorie: normalizeObservationCategory(
+          getCSVColumn(row, parsed.headers, 'type_retour') || getCSVColumn(row, parsed.headers, 'type'),
+        ),
+        type_autre: toOptionalString(getCSVColumn(row, parsed.headers, 'type_retour_autre')),
+        classes_concernees: parseListColumn(getCSVColumn(row, parsed.headers, 'classes_concernees')) as ObservationLibre['classes_concernees'],
         auteur: getCSVColumn(row, parsed.headers, 'auteur') || 'Anonyme',
         organisation: toOptionalString(getCSVColumn(row, parsed.headers, 'organisation')),
         date: getCSVColumn(row, parsed.headers, 'date') || new Date().toISOString().slice(0, 10),
+        heure: toOptionalString(getCSVColumn(row, parsed.headers, 'heure')),
         cible_id: toOptionalString(getCSVColumn(row, parsed.headers, 'cible_id')),
         corridor_id: toOptionalString(getCSVColumn(row, parsed.headers, 'faisceau_id')),
         segment_id: toOptionalString(getCSVColumn(row, parsed.headers, 'segment_id')),
-        indice_juge: toOptionalString(
-          getCSVColumn(row, parsed.headers, 'indice_juge'),
-        ) as ObservationLibre['indice_juge'],
-        upvotes: 0,
-        downvotes: 0,
+        segment_label: toOptionalString(getCSVColumn(row, parsed.headers, 'segment_label')),
+        indice_juge: normalizeIndiceFeedback(getCSVColumn(row, parsed.headers, 'indice_juge')),
+        upvotes: toOptionalNumber(getCSVColumn(row, parsed.headers, 'upvotes')) || 0,
+        downvotes: toOptionalNumber(getCSVColumn(row, parsed.headers, 'downvotes')) || 0,
         votedBy: [],
+        commentaires: parseObservationComments(getCSVColumn(row, parsed.headers, 'commentaires_json')),
+        photos: parseListColumn(getCSVColumn(row, parsed.headers, 'photos')).length > 0
+          ? parseListColumn(getCSVColumn(row, parsed.headers, 'photos'))
+          : undefined,
       });
     });
 
@@ -410,6 +490,7 @@ export async function loadCommentairesFromSheet(): Promise<CommentaireGeneral[] 
         auteur: getCSVColumn(row, parsed.headers, 'auteur') || 'Anonyme',
         texte,
         date: getCSVColumn(row, parsed.headers, 'date') || new Date().toISOString().slice(0, 10),
+        heure: toOptionalString(getCSVColumn(row, parsed.headers, 'heure')),
         faisceau_id: toOptionalString(getCSVColumn(row, parsed.headers, 'faisceau_id')),
       });
     });

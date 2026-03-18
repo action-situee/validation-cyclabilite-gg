@@ -40,20 +40,35 @@ export const ROLE_LABELS: Record<RoleContributeur, string> = {
   autre: 'Autre',
 };
 
-/* ── Champs structurés par catégorie ── */
-export interface DangerFields {
-  type_usager?: string;     // pieton, cycliste, tous
-  frequence?: string;       // quotidien, hebdomadaire, occasionnel
-  gravite?: string;         // faible, moderee, elevee, critique
-}
+export type ObservationCategory =
+  | 'securite_intersections'
+  | 'giratoire'
+  | 'maillage_alternative'
+  | 'equipement'
+  | 'permeabilite_frontiere'
+  | 'bande_piste'
+  | 'conflits_usage'
+  | 'autre';
 
-export interface AmenagementFields {
-  type_infra?: string;      // piste_separee, bande, zone30, eclairage, signalisation, stationnement
-  priorite?: string;        // basse, moyenne, haute, urgente
-}
+export type ObservationMetricClass =
+  | 'attractivite'
+  | 'confort'
+  | 'equipement'
+  | 'infrastructure'
+  | 'securite';
 
-export interface ValidationFields {
-  criteres_mal_evalues?: string[];  // trafic, revetement, continuite, securite, confort, signalisation
+export type ObservationIndiceFeedback =
+  | 'adapte'
+  | 'sur_estime'
+  | 'sous_estime';
+
+export interface ObservationComment {
+  id: string;
+  texte: string;
+  auteur?: string;
+  date: string;
+  heure?: string;
+  owner_fingerprint?: string;
 }
 
 export interface ObservationLibre {
@@ -61,26 +76,26 @@ export interface ObservationLibre {
   latitude: number;
   longitude: number;
   commentaire: string;
-  categorie: 'danger' | 'amenagement' | 'positif' | 'validation';
+  categorie: ObservationCategory;
+  type_autre?: string;
+  classes_concernees?: ObservationMetricClass[];
   auteur: string;
   organisation?: string;
   role?: RoleContributeur;
   date: string;
+  heure?: string;
   cible_id?: string;
   corridor_id?: string;
   segment_id?: string;
   segment_label?: string;
   segment_score_calcule?: number;
-  indice_juge?: 'trop_faible' | 'juste' | 'trop_eleve';
+  indice_juge?: ObservationIndiceFeedback;
   upvotes: number;
   downvotes: number;
   votedBy: string[];  // list of voter identifiers to prevent double vote
+  commentaires?: ObservationComment[];
   // Photos (base64 data URIs, compressed)
   photos?: string[];
-  // Structured sub-fields
-  danger_fields?: DangerFields;
-  amenagement_fields?: AmenagementFields;
-  validation_fields?: ValidationFields;
   // Fingerprint propriétaire (hash IP ou fallback local)
   owner_fingerprint?: string;
 }
@@ -90,6 +105,7 @@ export interface CommentaireGeneral {
   auteur: string;
   texte: string;
   date: string;
+  heure?: string;
   faisceau_id?: string;
   // Fingerprint propriétaire (hash IP ou fallback local)
   owner_fingerprint?: string;

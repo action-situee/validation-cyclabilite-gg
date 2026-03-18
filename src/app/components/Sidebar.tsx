@@ -29,29 +29,31 @@ export function Sidebar({
   };
 
   const safeThresholds = activeThresholds.length > 0 ? activeThresholds : [...VALUE_THRESHOLDS];
-  const legendBins = VALUE_PALETTE.map((color, index) => {
-    if (index === 0) {
-      return {
-        color,
-        label: `< ${formatThreshold(safeThresholds[0])}`,
-      };
-    }
-
-    if (index === VALUE_PALETTE.length - 1) {
-      return {
-        color,
-        label: `>= ${formatThreshold(safeThresholds[safeThresholds.length - 1])}`,
-      };
-    }
-
-    return {
-      color,
-      label: `${formatThreshold(safeThresholds[index - 1])} - ${formatThreshold(safeThresholds[index])}`,
-    };
-  });
+  const legendBins = [
+    {
+      color: VALUE_PALETTE[1],
+      label: `< ${formatThreshold(safeThresholds[2])}`,
+    },
+    {
+      color: VALUE_PALETTE[3],
+      label: `${formatThreshold(safeThresholds[2])} - ${formatThreshold(safeThresholds[4])}`,
+    },
+    {
+      color: VALUE_PALETTE[5],
+      label: `${formatThreshold(safeThresholds[4])} - ${formatThreshold(safeThresholds[6])}`,
+    },
+    {
+      color: VALUE_PALETTE[7],
+      label: `${formatThreshold(safeThresholds[6])} - ${formatThreshold(safeThresholds[8])}`,
+    },
+    {
+      color: VALUE_PALETTE[9],
+      label: `>= ${formatThreshold(safeThresholds[8])}`,
+    },
+  ];
 
   return (
-    <div className={`w-[360px] bg-[#E5EEE6] border-l-2 border-[#0a0a0a] flex flex-col h-full overflow-hidden ${className}`}>
+    <div className={`w-[360px] bg-[rgba(229,238,230,0.82)] backdrop-blur-[2px] border-l-2 border-[#0a0a0a] flex flex-col h-full overflow-hidden ${className}`}>
       <div className="p-5 border-b-2 border-[#0a0a0a] bg-[#2E6A4A]">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 border-2 border-[#D3E4D7] flex items-center justify-center">
@@ -64,15 +66,15 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-[#E5EEE6]">
-        <div className="p-4 border-b-2 border-[#0a0a0a] bg-[#E5EEE6] space-y-4">
+      <div className="flex-1 overflow-y-auto bg-[rgba(229,238,230,0.66)]">
+        <div className="p-4 border-b-2 border-[#0a0a0a] bg-[rgba(229,238,230,0.66)] space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-[10px] uppercase tracking-[0.15em] text-[#2E6A4A] mb-1">
                 Indice & projection
               </h2>
               <p className="text-[10px] text-[#5c5c5c] leading-relaxed">
-                Les consignes de contribution sont dans le bouton <strong className="text-[#2E6A4A]">?</strong> en haut.
+                Lisez l&apos;indice, comparez les classes et contribuez dans le panneau de gauche.
               </p>
             </div>
             <InfoTip text="Ce panneau regroupe la lecture de l'indice, le fond de carte et la legende quantile." />
@@ -86,7 +88,7 @@ export function Sidebar({
           />
         </div>
 
-        <div className="p-4 bg-[#E5EEE6]">
+        <div className="p-4 bg-[rgba(229,238,230,0.66)]">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h3 className="text-[10px] uppercase tracking-[0.15em] text-[#5c5c5c]">
               Legende quantiles

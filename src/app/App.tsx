@@ -5,22 +5,20 @@ import { AppDataProvider, useAppData } from './hooks/useAppData';
 import { Sidebar } from './components/Sidebar';
 import { ValidationSidebar } from './components/ValidationSidebar';
 import { Button } from './components/ui/Button';
-import type { BikeSegment, Cible, ObservationLibre, CommentaireGeneral } from './types';
+import type { BikeSegment, ObservationLibre, CommentaireGeneral } from './types';
 import { VALUE_THRESHOLDS, type BikeMetricKey } from './config/bikeMetrics';
 import { DEFAULT_BASEMAP, type BasemapMode } from './config/basemaps';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from './mock-data/faisceaux';
 import { exportGeoJSON, exportCSV } from './utils/export';
 
-const ALL_CLASSES = ['permeabilite_frontiere', 'intersections', 'giratoires', 'alternatives', 'continuite', 'equipements', 'attractivite'];
-const ALL_OBS_CATS = ['validation', 'danger', 'amenagement', 'positif'];
 const Map = lazy(() =>
   import('./components/Map').then((module) => ({ default: module.Map })),
 );
 const QuickAddForm = lazy(() =>
   import('./components/QuickAddForm').then((module) => ({ default: module.QuickAddForm })),
 );
-const CibleThread = lazy(() =>
-  import('./components/CibleThread').then((module) => ({ default: module.CibleThread })),
+const ObservationThread = lazy(() =>
+  import('./components/ObservationThread').then((module) => ({ default: module.ObservationThread })),
 );
 const SurveyModal = lazy(() =>
   import('./components/SurveyModal').then((module) => ({ default: module.SurveyModal })),
@@ -30,19 +28,18 @@ type SidebarMode = 'none' | 'left' | 'right' | 'both';
 
 function AppInner() {
   const {
-    cibles, observations, commentaires, faisceaux,
+    observations, commentaires, faisceaux,
     addObservation, deleteObservation, voteObservation,
-    addCommentaire, deleteCommentaire, getObservationsForCible,
-    isOwnObservation, isOwnCommentaire, cibleFaisceauMap,
+    addObservationComment, addCommentaire, updateCommentaire, deleteCommentaire,
+    isOwnObservation, isOwnCommentaire,
   } = useAppData();
 
   const [selectedFaisceau, setSelectedFaisceau] = useState<string | null>(null);
   const [addMode, setAddMode] = useState(false);
-  const [pendingPoint, setPendingPoint] = useState<{ lat: number; lng: number; cible?: Cible; segment?: BikeSegment } | null>(null);
-  const [selectedCible, setSelectedCible] = useState<Cible | null>(null);
+  const [pendingPoint, setPendingPoint] = useState<{ lat: number; lng: number; segment?: BikeSegment } | null>(null);
   const [selectedSegment, setSelectedSegment] = useState<BikeSegment | null>(null);
+  const [selectedObservation, setSelectedObservation] = useState<ObservationLibre | null>(null);
   const [hoveredSegment, setHoveredSegment] = useState<BikeSegment | null>(null);
-  const [threadCible, setThreadCible] = useState<Cible | null>(null);
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>('both');
   const [mobileSidebarVisible, setMobileSidebarVisible] = useState(false);
   const [flyTo, setFlyTo] = useState<{ center: [number, number]; zoom: number } | null>(null);
@@ -58,10 +55,6 @@ function AppInner() {
 
   // Survey modal
   const [showSurvey, setShowSurvey] = useState(false);
-
-  // Legend filters
-  const [activeClasses, setActiveClasses] = useState<string[]>(ALL_CLASSES);
-  const [activeObsCats, setActiveObsCats] = useState<string[]>(ALL_OBS_CATS);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,51 +88,18 @@ function AppInner() {
     };
   }, []);
 
-  const toggleClass = useCallback((cls: string) => {
-    setActiveClasses((prev) =>
-      prev.includes(cls) ? prev.filter((c) => c !== cls) : [...prev, cls]
-    );
-  }, []);
-
-  const toggleObsCat = useCallback((cat: string) => {
-    setActiveObsCats((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    );
-  }, []);
-
-  // Toggle all classes / all obs cats
-  const toggleAllClasses = useCallback(() => {
-    setActiveClasses((prev) => prev.length === ALL_CLASSES.length ? [] : [...ALL_CLASSES]);
-  }, []);
-
-  const toggleAllObsCats = useCallback(() => {
-    setActiveObsCats((prev) => prev.length === ALL_OBS_CATS.length ? [] : [...ALL_OBS_CATS]);
-  }, []);
-
-  // Filters
-  const filteredCibles = useMemo(() => {
-    let result = cibles;
-    if (selectedFaisceau) result = result.filter((c) => c.faisceau_id === selectedFaisceau);
-    result = result.filter((c) => activeClasses.includes(c.theme_principal));
-    return result;
-  }, [cibles, selectedFaisceau, activeClasses]);
-
   const filteredObservations = useMemo(() => {
     let result = observations;
     if (selectedFaisceau) {
       result = result.filter((o) => {
-        if (o.cible_id) {
-          return cibleFaisceauMap.get(o.cible_id) === selectedFaisceau;
-        }
         if (o.corridor_id) {
           return o.corridor_id === selectedFaisceau;
         }
         return true;
       });
     }
-    result = result.filter((o) => activeObsCats.includes(o.categorie));
     return result;
-  }, [observations, selectedFaisceau, cibleFaisceauMap, activeObsCats]);
+  }, [observations, selectedFaisceau]);
 
   // Faisceau change → flyTo
   const handleFaisceauChange = useCallback((faisceauId: string | null) => {
@@ -154,23 +114,16 @@ function AppInner() {
     }
   }, [faisceaux]);
 
-  const handleCibleClick = useCallback((cible: Cible) => {
-    setSelectedCible(cible);
-    setSelectedSegment(null);
-    setThreadCible(cible);
-    setAddMode(false);
-  }, []);
-
   const handleMapClick = useCallback((lat: number, lng: number, segment?: BikeSegment | null) => {
     setPendingPoint({ lat, lng, segment: segment || undefined });
-    setSelectedCible(null);
-    setThreadCible(null);
+    setSelectedObservation(null);
     setSelectedSegment(segment || null);
     setAddMode(false);
   }, []);
 
   const handleMapBackgroundClick = useCallback(() => {
     setSelectedSegment(null);
+    setSelectedObservation(null);
   }, []);
 
   const handleHoverSegment = useCallback((segment: BikeSegment | null) => {
@@ -183,8 +136,7 @@ function AppInner() {
 
   const handleSegmentClick = useCallback((segment: BikeSegment) => {
     setSelectedSegment(segment);
-    setSelectedCible(null);
-    setThreadCible(null);
+    setSelectedObservation(null);
 
     if (addMode) {
       setPendingPoint({
@@ -197,11 +149,17 @@ function AppInner() {
     }
   }, [addMode]);
 
+  const handleObservationClick = useCallback((observation: ObservationLibre) => {
+    setSelectedObservation(observation);
+    setSelectedSegment(null);
+    setAddMode(false);
+  }, []);
+
   const handleSubmitObservation = useCallback((obs: ObservationLibre) => {
     const savedId = addObservation(obs);
     setPendingPoint(null);
-    setSelectedCible(null);
     setSelectedSegment(null);
+    setSelectedObservation(null);
     toast.success('Observation enregistrée', {
       description: 'Merci pour votre contribution.',
       action: {
@@ -229,9 +187,16 @@ function AppInner() {
     });
   }, [addCommentaire, deleteCommentaire]);
 
+  const handleUpdateCommentaire = useCallback((com: CommentaireGeneral) => {
+    if (!isOwnCommentaire(com.id)) return;
+    updateCommentaire(com);
+    toast.success('Commentaire mis à jour');
+  }, [isOwnCommentaire, updateCommentaire]);
+
   const handleDeleteObservation = useCallback((id: string) => {
     if (!isOwnObservation(id)) return;
     deleteObservation(id);
+    setSelectedObservation((current) => (current?.id === id ? null : current));
     toast.info('Votre observation a été supprimée');
   }, [deleteObservation, isOwnObservation]);
 
@@ -250,32 +215,29 @@ function AppInner() {
     voteObservation(obsId, direction, voterId);
   }, [voteObservation]);
 
-  const handleThreadAddObservation = useCallback(() => {
-    if (threadCible) {
-      setPendingPoint({ lat: threadCible.latitude, lng: threadCible.longitude, cible: threadCible });
-      setSelectedSegment(null);
-    }
-  }, [threadCible]);
+  const handleAddObservationComment = useCallback((observationId: string, texte: string) => {
+    addObservationComment(observationId, texte);
+  }, [addObservationComment]);
 
   const handleExportGeoJSON = useCallback(() => {
-    exportGeoJSON(cibles, observations, commentaires);
+    exportGeoJSON([], observations, commentaires);
     toast.success('Export GeoJSON téléchargé');
-  }, [cibles, observations, commentaires]);
+  }, [observations, commentaires]);
 
   const handleExportCSV = useCallback(() => {
     exportCSV(observations);
     toast.success('Export CSV téléchargé');
   }, [observations]);
 
-  const threadObservations = useMemo(() => {
-    if (!threadCible) return [];
-    return getObservationsForCible(threadCible.cible_id);
-  }, [threadCible, getObservationsForCible]);
-
   const activeThresholds = useMemo(() => {
     const thresholds = quantileMap[selectedMetric];
     return Array.isArray(thresholds) && thresholds.length > 0 ? thresholds : [...VALUE_THRESHOLDS];
   }, [quantileMap, selectedMetric]);
+
+  const currentSelectedObservation = useMemo(() => {
+    if (!selectedObservation) return null;
+    return observations.find((observation) => observation.id === selectedObservation.id) || null;
+  }, [observations, selectedObservation]);
 
   const leftSidebarOpen = sidebarMode === 'left' || sidebarMode === 'both';
   const rightSidebarOpen = sidebarMode === 'right' || sidebarMode === 'both';
@@ -322,18 +284,14 @@ function AppInner() {
     selectedFaisceau,
     onFaisceauChange: handleFaisceauChange,
     faisceaux,
+    onOpenSurvey: () => setShowSurvey(true),
     showCorridors,
     onToggleCorridors: () => setShowCorridors((value) => !value),
     commentaires,
     onAddCommentaire: handleAddCommentaire,
+    onUpdateCommentaire: handleUpdateCommentaire,
     onDeleteCommentaire: handleDeleteCommentaire,
     observationsCount: filteredObservations.length,
-    activeClasses,
-    activeObsCats,
-    onToggleClass: toggleClass,
-    onToggleObsCat: toggleObsCat,
-    onToggleAllClasses: toggleAllClasses,
-    onToggleAllObsCats: toggleAllObsCats,
     onExportGeoJSON: handleExportGeoJSON,
     onExportCSV: handleExportCSV,
     isOwnCommentaire,
@@ -369,7 +327,14 @@ function AppInner() {
       <div className="bg-white border-b-2 border-[#0a0a0a] px-3 py-2.5 sm:px-4 z-20 shrink-0">
         <div className="grid grid-cols-[auto_1fr] items-start gap-x-3 gap-y-2 sm:grid-cols-[auto_1fr_auto] sm:items-center">
           <div className="flex items-center gap-4 min-w-0 shrink-0">
-          <Bike className="w-5 h-5 text-[#2E6A4A]" />
+            <button
+              onClick={() => setShowHelp(true)}
+              className="p-1.5 sm:p-2 border-2 border-transparent hover:border-[#0a0a0a] transition-all"
+              aria-label="Mode d'emploi"
+              title="Mode d'emploi"
+            >
+              <HelpCircle className="w-5 h-5 text-[#2E6A4A]" />
+            </button>
           </div>
 
           <div className="min-w-0 sm:px-4 sm:text-center">
@@ -406,35 +371,6 @@ function AppInner() {
               ))}
             </div>
 
-            <button
-              onClick={() => setShowSurvey(true)}
-              className="p-1.5 sm:p-2 border-2 border-transparent hover:border-[#0a0a0a] transition-all"
-              aria-label="Questionnaire"
-              title="Questionnaire rapide"
-            >
-              <ClipboardCheck className="w-5 h-5 text-[#2E6A4A]" />
-            </button>
-
-            <button
-              onClick={() => setShowHelp(true)}
-              className="p-1.5 sm:p-2 border-2 border-transparent hover:border-[#0a0a0a] transition-all"
-              aria-label="Mode d'emploi"
-              title="Mode d'emploi"
-            >
-              <HelpCircle className="w-5 h-5 text-[#2E6A4A]" />
-            </button>
-
-            <Button
-              variant={addMode || shouldPulseAddButton ? 'primary' : 'outline'}
-              size="sm"
-              onClick={handleAddButtonClick}
-              className={`ml-auto sm:ml-0 ${shouldPulseAddButton ? 'animate-pulse' : ''}`}
-            >
-              {addMode ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              <span className="hidden sm:inline">
-                {addMode ? 'Annuler' : shouldPulseAddButton ? 'Commenter le troncon' : 'Ajouter'}
-              </span>
-            </Button>
           </div>
         </div>
       </div>
@@ -456,6 +392,18 @@ function AppInner() {
 
         {/* Carte */}
         <div className="flex-1 relative">
+          <div className="absolute top-3 right-3 z-30 pointer-events-auto">
+            <Button
+              variant={addMode ? 'primary' : 'outline'}
+              size="lg"
+              onClick={handleAddButtonClick}
+              className={`${shouldPulseAddButton && !addMode ? 'animate-pulse' : ''} !bg-white text-[13px] font-bold uppercase tracking-[0.08em] px-4 py-3 border-2 border-[#0a0a0a] shadow-[0_4px_14px_rgba(10,10,10,0.22)]`}
+            >
+              {addMode ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+              <span>{addMode ? 'Annuler' : 'Ajouter'}</span>
+            </Button>
+          </div>
+
           <Suspense
             fallback={
               <div className="w-full h-full flex items-center justify-center bg-[#eae8e0]">
@@ -471,16 +419,17 @@ function AppInner() {
             }
           >
             <Map
-              cibles={filteredCibles}
+              cibles={[]}
               observations={filteredObservations}
               faisceaux={faisceaux}
-              selectedCible={selectedCible}
+              selectedCible={null}
               selectedSegment={selectedSegment}
               selectedMetric={selectedMetric}
               metricThresholds={activeThresholds}
               basemap={basemap}
               onBasemapChange={setBasemap}
-              onCibleClick={handleCibleClick}
+              onCibleClick={() => {}}
+              onObservationClick={handleObservationClick}
               onSegmentClick={handleSegmentClick}
               onHoverSegment={handleHoverSegment}
               onMapBackgroundClick={handleMapBackgroundClick}
@@ -537,16 +486,15 @@ function AppInner() {
         )}
       </div>
 
-      {/* Fil de discussion par cible */}
-      {threadCible && !pendingPoint && (
+      {/* Fil de discussion par remontée */}
+      {currentSelectedObservation && !pendingPoint && (
         <Suspense fallback={null}>
-          <CibleThread
-            cible={threadCible}
-            observations={threadObservations}
-            onClose={() => { setThreadCible(null); setSelectedCible(null); }}
+          <ObservationThread
+            observation={currentSelectedObservation}
+            onClose={() => setSelectedObservation(null)}
             onVote={handleVote}
             onDelete={handleDeleteObservation}
-            onAddObservation={handleThreadAddObservation}
+            onAddComment={handleAddObservationComment}
             isOwn={isOwnObservation}
           />
         </Suspense>
@@ -558,10 +506,9 @@ function AppInner() {
           <QuickAddForm
             latitude={pendingPoint.lat}
             longitude={pendingPoint.lng}
-            cible={pendingPoint.cible}
             segment={pendingPoint.segment}
             onSubmit={handleSubmitObservation}
-            onClose={() => { setPendingPoint(null); setSelectedCible(null); }}
+            onClose={() => { setPendingPoint(null); }}
           />
         </Suspense>
       )}
@@ -586,35 +533,44 @@ function AppInner() {
             <div className="p-6 space-y-5">
               {/* Intro */}
               <p className="text-[12px] text-[#5c5c5c] leading-relaxed">
-                Cette interface permet de visualiser et valider l&apos;indice de cyclabilite sur <strong className="text-[#2E6A4A]">l&apos;ensemble du Grand Geneve</strong>. Toutes les consignes de contribution sont centralisees ici, et la sidebar a droite sert a lire l&apos;indice, changer le fond de carte et comparer les classes.
+                Cette interface permet de visualiser et commenter l&apos;indice de cyclabilite sur <strong className="text-[#2E6A4A]">deux faisceaux transfrontaliers du Grand Geneve</strong>. Suivez les 4 etapes ci-dessous pour contribuer. Merci pour votre participation !
               </p>
 
-              {/* Appel à l'action principal */}
-              <div className="border-2 border-[#2E6A4A] bg-[#D3E4D7] p-4" style={{ boxShadow: '4px 4px 0 rgba(0,0,0,0.08)' }}>
-                <h3 className="text-[11px] uppercase tracking-[0.12em] text-[#2E6A4A] mb-2">3 facons de contribuer</h3>
-                <ol className="text-[12px] text-[#5c5c5c] space-y-1.5 list-decimal list-inside leading-relaxed">
-                  <li><strong className="text-[#2E6A4A]">Repondre au questionnaire</strong> via l&apos;icone <ClipboardCheck className="w-3.5 h-3.5 inline text-[#2E6A4A] -mt-0.5" /> dans la barre superieure.</li>
-                  <li><strong className="text-[#2E6A4A]">Commenter un point d&apos;attention</strong> en cliquant sur une pastille coloree deja presente sur la carte.</li>
-                  <li><strong className="text-[#2E6A4A]">Ajouter une remontee libre</strong> avec <strong className="text-[#2E6A4A]">+ Ajouter</strong>, puis cliquer sur la carte pour rattacher le point au troncon visible le plus proche.</li>
-                </ol>
+              {/* Séquence */}
+              <div className="border-2 border-[#2E6A4A] bg-white p-4 space-y-3" style={{ boxShadow: '4px 4px 0 rgba(0,0,0,0.08)' }}>
+                <h3 className="text-[11px] uppercase tracking-[0.12em] text-[#2E6A4A]">Sequence de contribution</h3>
+                {[
+                  { n: '1', title: 'Questionnaire general', desc: 'Bouton dans la sidebar droite (icone presse-papier). Votre avis global sur l\'indice et vos suggestions y sont enregistres.' },
+                  { n: '2', title: 'Choisir un corridor', desc: 'Selecteur dans la sidebar gauche. Zoomez sur l\'un des deux axes transfrontaliers pour evaluer les troncons en detail.' },
+                  { n: '3', title: 'Poser des points sur la carte', desc: 'Bouton + Ajouter dans le header, puis cliquez sur la carte. Le point est automatiquement rattache au troncon le plus proche.' },
+                  { n: '4', title: 'Laisser un commentaire general', desc: 'Section Commentaires dans la sidebar gauche. Pour les remarques qui ne se rattachent pas a un troncon precis.' },
+                ].map(({ n, title, desc }) => (
+                  <div key={n} className="flex items-start gap-3">
+                    <span className="shrink-0 w-6 h-6 flex items-center justify-center bg-[#2E6A4A] text-[#D3E4D7] text-[10px] font-mono font-bold">{n}</span>
+                    <div>
+                      <p className="text-[12px] text-[#0a0a0a] font-semibold leading-tight mb-0.5">{title}</p>
+                      <p className="text-[11px] text-[#5c5c5c] leading-relaxed">{desc}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               {/* Corridors */}
-              <div className="border-2 border-[#2E6A4A] bg-[#D3E4D7] p-4">
-                <h3 className="text-[11px] uppercase tracking-[0.12em] text-[#2E6A4A] mb-2">Les corridors</h3>
+              <div className="border-2 border-[#2E6A4A] bg-white p-4">
+                <h3 className="text-[11px] uppercase tracking-[0.12em] text-[#2E6A4A] mb-2">Les deux corridors</h3>
                 <ul className="text-[12px] text-[#5c5c5c] space-y-1 ml-4 list-disc">
-                  <li><strong className="text-[#2E6A4A]">Saint-Julien – PLO – Genève</strong> – axe sud</li>
-                  <li><strong className="text-[#2E6A4A]">Gaillard – Thonex – Eaux-Vives</strong> – axe est</li>
+                  <li><strong className="text-[#2E6A4A]">Saint-Julien – PLO – Geneve</strong></li>
+                  <li><strong className="text-[#2E6A4A]">Gaillard – Thonex – Eaux-Vives</strong></li>
                 </ul>
                 <p className="text-[11px] text-[#999] mt-2">
-                  La carte reste disponible à l'échelle du territoire complet, et le sélecteur de corridor sert à zoomer et à mettre en avant les deux axes transfrontaliers prioritaires.
+                  La carte reste disponible a l&apos;echelle du territoire complet. Le selecteur de corridor sert a zoomer et a filtrer les contributions.
                 </p>
               </div>
 
-              {/* Suppression */}
+              {/* Note */}
               <div className="border border-[#e0e0dc] p-3">
                 <p className="text-[11px] text-[#999] leading-relaxed">
-                  <strong className="text-[#5c5c5c]">Note :</strong> seul l'auteur d'une contribution peut la supprimer. Votre identifiant est généré automatiquement – aucun mot de passe requis.
+                  <strong className="text-[#5c5c5c]">Note :</strong> seul l&apos;auteur d&apos;une contribution peut la supprimer. Votre identifiant est genere automatiquement – aucun mot de passe requis.
                 </p>
               </div>
             </div>
@@ -627,9 +583,19 @@ function AppInner() {
         <SurveyModal
           open={showSurvey}
           onClose={() => setShowSurvey(false)}
-          onSubmitted={() => {
+          onSubmitted={(q3, auteur, date) => {
             setShowSurvey(false);
             toast.success('Merci pour votre retour sur l\'indice');
+            if (q3?.trim()) {
+              const now = new Date();
+              addCommentaire({
+                id: '',
+                auteur: auteur || 'Anonyme',
+                texte: q3.trim(),
+                date: date || now.toISOString().slice(0, 10),
+                heure: now.toTimeString().slice(0, 8),
+              });
+            }
           }}
         />
       </Suspense>

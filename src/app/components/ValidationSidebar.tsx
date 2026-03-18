@@ -1,109 +1,40 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   CheckCircle2,
-  MessageSquare,
   Send,
   Trash2,
   ChevronDown,
   ChevronUp,
   MapPin,
   Layers,
-  Eye,
-  EyeOff,
-  Download,
+  Pencil,
+  ClipboardCheck,
 } from 'lucide-react';
-import type { CommentaireGeneral } from '../types';
-import type { Faisceau } from '../types';
+import type { CommentaireGeneral, Faisceau } from '../types';
 import { Button } from './ui/Button';
-import { CIBLE_THEMES, OBS_CATEGORIES } from '../config/palette';
-import { InfoTip } from './InfoTip';
-
-function MarkerSwatch({
-  color,
-  active,
-  variant = 'observation',
-}: {
-  color: string;
-  active: boolean;
-  variant?: 'cible' | 'observation';
-}) {
-  const size = variant === 'cible' ? 11 : 14;
-  const armLength = Math.max(10, Math.round(size * 0.78));
-  const armThickness = Math.max(2, Math.round(size * 0.14));
-
-  return (
-    <span
-      className="relative inline-flex items-center justify-center shrink-0"
-      style={{
-        width: size,
-        height: size,
-        opacity: active ? 1 : 0.4,
-        overflow: 'visible',
-      }}
-    >
-      {variant === 'cible' ? (
-        <span
-          className="absolute"
-          style={{
-            backgroundColor: color,
-            width: size,
-            height: size,
-            border: '1.4px solid #0a0a0a',
-            borderRadius: 999,
-          }}
-        />
-      ) : (
-        <>
-          <span
-            className="absolute"
-            style={{
-              backgroundColor: color,
-              width: armLength,
-              height: armThickness,
-              borderRadius: 999,
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%, -50%) rotate(45deg)',
-            }}
-          />
-          <span
-            className="absolute"
-            style={{
-              backgroundColor: color,
-              width: armLength,
-              height: armThickness,
-              borderRadius: 999,
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%, -50%) rotate(-45deg)',
-            }}
-          />
-        </>
-      )}
-    </span>
-  );
-}
 
 interface ValidationSidebarProps {
   className?: string;
   selectedFaisceau: string | null;
   onFaisceauChange: (faisceauId: string | null) => void;
   faisceaux: Faisceau[];
+  onOpenSurvey: () => void;
   showCorridors: boolean;
   onToggleCorridors: () => void;
   commentaires: CommentaireGeneral[];
   onAddCommentaire: (com: CommentaireGeneral) => void;
+  onUpdateCommentaire: (com: CommentaireGeneral) => void;
   onDeleteCommentaire: (id: string) => void;
   observationsCount: number;
-  activeClasses: string[];
-  activeObsCats: string[];
-  onToggleClass: (cls: string) => void;
-  onToggleObsCat: (cat: string) => void;
   onExportGeoJSON: () => void;
   onExportCSV: () => void;
   isOwnCommentaire: (id: string) => boolean;
-  onToggleAllClasses: () => void;
-  onToggleAllObsCats: () => void;
+}
+
+function formatCommentTimestamp(commentaire: CommentaireGeneral) {
+  return commentaire.heure
+    ? `${commentaire.date} · ${commentaire.heure}`
+    : commentaire.date;
 }
 
 export function ValidationSidebar({
@@ -111,87 +42,145 @@ export function ValidationSidebar({
   selectedFaisceau,
   onFaisceauChange,
   faisceaux,
+  onOpenSurvey,
   showCorridors,
   onToggleCorridors,
   commentaires,
   onAddCommentaire,
+  onUpdateCommentaire,
   onDeleteCommentaire,
   observationsCount,
-  activeClasses,
-  activeObsCats,
-  onToggleClass,
-  onToggleObsCat,
   onExportGeoJSON,
   onExportCSV,
   isOwnCommentaire,
-  onToggleAllClasses,
-  onToggleAllObsCats,
 }: ValidationSidebarProps) {
   const [newComment, setNewComment] = useState('');
-  const [newAuthor, setNewAuthor] = useState('');
+  const [showSequence, setShowSequence] = useState(true);
   const [showComments, setShowComments] = useState(true);
-  const [showExport, setShowExport] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const sectionClass = 'p-4 border-b border-[#dfe3df] bg-white';
+  const sectionTitleClass = 'text-[11px] uppercase tracking-[0.12em] text-[#1f2b24] mb-3 font-extrabold';
+  const bodyTextClass = 'text-[11px] text-[#4d5853] leading-relaxed';
+  const fieldClass = 'w-full px-3 py-2 border border-[#c9d0cc] bg-white text-[12px] resize-none focus:outline-none focus:border-[#2E6A4A] transition-colors';
 
-  const allClassesActive = activeClasses.length === CIBLE_THEMES.length;
-  const allObsCatsActive = activeObsCats.length === OBS_CATEGORIES.length;
+  const filteredComments = useMemo(() => (
+    selectedFaisceau
+      ? commentaires.filter((commentaire) => !commentaire.faisceau_id || commentaire.faisceau_id === selectedFaisceau)
+      : commentaires
+  ), [commentaires, selectedFaisceau]);
 
-  const handleSubmitComment = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmitComment = (event: React.FormEvent) => {
+    event.preventDefault();
     if (!newComment.trim()) return;
+
+    const now = new Date();
     onAddCommentaire({
       id: '',
-      auteur: newAuthor.trim() || 'Anonyme',
+      auteur: 'Anonyme',
       texte: newComment.trim(),
-      date: new Date().toISOString().split('T')[0],
+      date: now.toISOString().slice(0, 10),
+      heure: now.toTimeString().slice(0, 8),
       faisceau_id: selectedFaisceau || undefined,
     });
     setNewComment('');
   };
 
-  const filteredComments = selectedFaisceau
-    ? commentaires.filter((commentaire) => !commentaire.faisceau_id || commentaire.faisceau_id === selectedFaisceau)
-    : commentaires;
+  const handleSaveEdit = (commentaire: CommentaireGeneral) => {
+    if (!editingText.trim()) return;
+
+    const now = new Date();
+    onUpdateCommentaire({
+      ...commentaire,
+      texte: editingText.trim(),
+      heure: now.toTimeString().slice(0, 8),
+    });
+    setEditingId(null);
+    setEditingText('');
+  };
 
   return (
-    <div className={`w-[360px] bg-[#E5EEE6] border-r-2 border-[#0a0a0a] flex flex-col h-full overflow-hidden ${className}`}>
+    <div className={`w-[360px] bg-[rgba(229,238,230,0.82)] backdrop-blur-[2px] border-r-2 border-[#0a0a0a] flex flex-col h-full overflow-hidden ${className}`}>
       <div className="p-5 border-b-2 border-[#0a0a0a] bg-[#2E6A4A]">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 border-2 border-[#D3E4D7] flex items-center justify-center">
             <CheckCircle2 className="w-5 h-5 text-[#D3E4D7]" />
           </div>
           <div>
-            <h1 className="text-[#D3E4D7] text-sm uppercase tracking-[0.15em]">Validation</h1>
-            <p className="text-[#8AA894] text-[10px] uppercase tracking-[0.1em]">Retours & contributions</p>
+            <h1 className="text-[#D3E4D7] text-sm uppercase tracking-[0.15em]">Contribution</h1>
+            <p className="text-[#8AA894] text-[10px] uppercase tracking-[0.1em]">Remontees & commentaires</p>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-[#E5EEE6]">
-        <div className="p-4 border-b-2 border-[#0a0a0a] bg-[#E5EEE6] grid grid-cols-2 gap-0">
-          <div className="border-2 border-[#0a0a0a] border-r p-3 text-center">
-            <div className="text-2xl text-[#2E6A4A] font-mono">{observationsCount}</div>
-            <div className="text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c]">Retours</div>
-          </div>
-          <div className="border-2 border-[#0a0a0a] border-l-0 p-3 text-center">
-            <div className="text-2xl text-[#2E6A4A] font-mono">{commentaires.length}</div>
-            <div className="text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c]">Commentaires</div>
-          </div>
+      <div className="flex-1 overflow-y-auto bg-[rgba(229,238,230,0.66)]">
+        {/* Sequence steps */}
+        <div className="p-4 border-b border-[#dfe3df] bg-[#D3E4D7]">
+          <button
+            onClick={() => setShowSequence((previous) => !previous)}
+            className="w-full flex items-center justify-between"
+          >
+            <p className="text-[9px] uppercase tracking-[0.15em] text-[#999]">Séquence de contribution</p>
+            {showSequence ? <ChevronUp className="w-4 h-4 text-[#999]" /> : <ChevronDown className="w-4 h-4 text-[#999]" />}
+          </button>
+
+          {showSequence && (
+            <div className="space-y-2 mt-3">
+              {[
+                { n: '1', label: 'Remplir le questionnaire general', sub: 'Section Questionnaire ci-dessous' },
+                { n: '2', label: 'Choisir un corridor', sub: 'Selecteur ci-dessous' },
+                { n: '3', label: 'Poser des points sur la carte', sub: 'Bouton Ajouter en haut a droite de la carte' },
+                { n: '4', label: 'Laisser un commentaire general', sub: 'Section Commentaires ci-dessous' },
+              ].map(({ n, label, sub }, index, steps) => (
+                <React.Fragment key={n}>
+                  <div className="flex items-start gap-2.5">
+                    <span className="shrink-0 w-5 h-5 flex items-center justify-center bg-[#2E6A4A] text-[#D3E4D7] text-[9px] font-mono font-bold">{n}</span>
+                    <div>
+                      <p className="text-[11px] text-[#0a0a0a] font-semibold leading-tight">{label}</p>
+                      <p className="text-[10px] text-[#999]">{sub}</p>
+                    </div>
+                  </div>
+                  {index < steps.length - 1 && (
+                    <div className="pl-[2px]">
+                      <ChevronDown className="w-3.5 h-3.5 text-[#2E6A4A]" />
+                    </div>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
         </div>
 
-        <div className="p-4 border-b-2 border-[#0a0a0a] bg-[#E5EEE6]">
-          <h3 className="text-[10px] uppercase tracking-[0.15em] text-[#5c5c5c] mb-3">
-            Corridor transfrontalier
+        <div className={sectionClass}>
+          <h3 className={sectionTitleClass}>
+            Etape 1 · Questionnaire general
+          </h3>
+          <p className={`${bodyTextClass} mb-3`}>
+            Donnez votre avis global sur l&apos;indice et proposez vos suggestions.
+          </p>
+          <button
+            onClick={onOpenSurvey}
+            className="w-full flex items-center justify-center gap-2 px-2.5 py-2 border border-[#2E6A4A] bg-white text-[#2E6A4A] hover:bg-[#2E6A4A] hover:text-[#D3E4D7] transition-all text-[10px] uppercase tracking-[0.1em]"
+          >
+            <ClipboardCheck className="w-3.5 h-3.5" />
+            Repondre au questionnaire
+          </button>
+        </div>
+
+        <div className={sectionClass}>
+          <h3 className={sectionTitleClass}>
+            Etape 2 · Corridor transfrontalier
           </h3>
 
-          <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c] mb-2">
+          <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-[#4d5853] mb-2">
             <MapPin className="w-3.5 h-3.5 text-[#2E6A4A]" />
             Focus carte
           </label>
           <div className="relative">
             <select
               value={selectedFaisceau || ''}
-              onChange={(e) => onFaisceauChange(e.target.value || null)}
-              className="w-full px-3 py-2 pr-9 border-2 border-[#0a0a0a] bg-white text-[13px] focus:outline-none focus:border-[#2E6A4A] transition-colors appearance-none"
+              onChange={(event) => onFaisceauChange(event.target.value || null)}
+              className="w-full px-3 py-2 pr-9 border border-[#c9d0cc] bg-white text-[13px] focus:outline-none focus:border-[#2E6A4A] transition-colors appearance-none"
             >
               <option value="">Vue d&apos;ensemble</option>
               {faisceaux.map((faisceau) => (
@@ -213,96 +202,25 @@ export function ValidationSidebar({
           >
             <Layers className="w-3.5 h-3.5" />
             <span className="flex-1 text-left">Delimitations corridors</span>
-            {showCorridors ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
           </button>
         </div>
 
-        <div className="p-4 border-b-2 border-[#0a0a0a] bg-[#E5EEE6]">
-          <h3 className="text-[10px] uppercase tracking-[0.15em] text-[#5c5c5c] mb-3">
-            Filtres contributions
-          </h3>
-
-          <div className="flex items-center justify-between mb-1.5">
-            <p className="text-[10px] uppercase tracking-[0.1em] text-[#2E6A4A] flex items-center gap-1.5">
-              <MarkerSwatch color="#2E6A4A" active variant="cible" />
-              Points d&apos;attention
-              <InfoTip text="Pastilles de l'etude visibles au-dessus de l'indice. Cliquez dessus pour ouvrir le fil de discussion associe." />
-            </p>
-            <button
-              onClick={onToggleAllClasses}
-              className="text-[9px] uppercase tracking-wider text-[#2E6A4A] hover:text-[#2E6A4A] transition-colors border-b border-[#2E6A4A] hover:border-[#2E6A4A] pb-px"
-            >
-              {allClassesActive ? 'Tout masquer' : 'Tout afficher'}
-            </button>
+        <div className={sectionClass}>
+          <div className={sectionTitleClass}>
+            Etape 3 · Contributions localisees sur la carte
           </div>
-
-          <div className="space-y-px mb-4">
-            {CIBLE_THEMES.map((item) => {
-              const active = activeClasses.includes(item.key);
-              return (
-                <button
-                  key={item.key}
-                  onClick={() => onToggleClass(item.key)}
-                  className={`flex items-center gap-2.5 w-full px-2 py-1.5 text-[11px] transition-all border-l-2 ${
-                    active
-                      ? 'bg-[#E5EEE6] border-current text-[#0a0a0a]'
-                      : 'opacity-30 border-transparent hover:opacity-50'
-                  }`}
-                  style={{ borderLeftColor: active ? item.color : 'transparent' }}
-                >
-                  <MarkerSwatch color={item.color} active={active} variant="cible" />
-                  <span className="flex-1 text-left tracking-wide">{item.label}</span>
-                  {active ? <Eye className="w-3 h-3 text-[#999]" /> : <EyeOff className="w-3 h-3 text-[#ccc]" />}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center justify-between mb-1.5">
-            <p className="text-[10px] uppercase tracking-[0.1em] text-[#2E6A4A] flex items-center gap-1.5">
-              <MarkerSwatch color="#2E6A4A" active />
-              Vos retours terrain
-              <InfoTip text="Contributions libres ajoutees avec le bouton + Ajouter." />
-            </p>
-            <button
-              onClick={onToggleAllObsCats}
-              className="text-[9px] uppercase tracking-wider text-[#2E6A4A] hover:text-[#2E6A4A] transition-colors border-b border-[#2E6A4A] hover:border-[#2E6A4A] pb-px"
-            >
-              {allObsCatsActive ? 'Tout masquer' : 'Tout afficher'}
-            </button>
-          </div>
-
-          <div className="space-y-px">
-            {OBS_CATEGORIES.map((item) => {
-              const active = activeObsCats.includes(item.key);
-              return (
-                <button
-                  key={item.key}
-                  onClick={() => onToggleObsCat(item.key)}
-                  className={`flex items-center gap-2.5 w-full px-2 py-1.5 text-[11px] transition-all border-l-2 ${
-                    active
-                      ? 'bg-[#E5EEE6] text-[#0a0a0a]'
-                      : 'opacity-30 border-transparent hover:opacity-50'
-                  }`}
-                  style={{ borderLeftColor: active ? item.color : 'transparent' }}
-                >
-                  <MarkerSwatch color={item.color} active={active} />
-                  <span className="flex-1 text-left tracking-wide">{item.label}</span>
-                  {active ? <Eye className="w-3 h-3 text-[#999]" /> : <EyeOff className="w-3 h-3 text-[#ccc]" />}
-                </button>
-              );
-            })}
-          </div>
+          <p className={bodyTextClass}>
+            Ajoutez directement des points sur la carte. Cliquez sur + Ajouter pour creer un point. Appuyez sur un point existant pour lire la discussion, voter ou y ajouter un commentaire.
+          </p>
         </div>
 
-        <div className="p-4 border-b-2 border-[#0a0a0a] bg-[#E5EEE6]">
+        <div className={sectionClass}>
           <button
             onClick={() => setShowComments(!showComments)}
             className="flex items-center justify-between w-full mb-3"
           >
-            <span className="flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c]">
-              <MessageSquare className="w-3.5 h-3.5 text-[#2E6A4A]" />
-              Commentaires ({filteredComments.length})
+            <span className="text-[11px] uppercase tracking-[0.12em] text-[#1f2b24] font-extrabold">
+              Etape 4 · Commentaires
             </span>
             {showComments ? <ChevronUp className="w-4 h-4 text-[#999]" /> : <ChevronDown className="w-4 h-4 text-[#999]" />}
           </button>
@@ -312,19 +230,12 @@ export function ValidationSidebar({
               <form onSubmit={handleSubmitComment} className="mb-4 space-y-2">
                 <textarea
                   value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Votre commentaire..."
-                  className="w-full px-3 py-2 border-2 border-[#0a0a0a] bg-white text-[12px] resize-none focus:outline-none focus:border-[#2E6A4A] transition-colors"
-                  rows={2}
+                  onChange={(event) => setNewComment(event.target.value)}
+                  placeholder="Commentaire ou suggestion generale..."
+                  className={fieldClass}
+                  rows={3}
                 />
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newAuthor}
-                    onChange={(e) => setNewAuthor(e.target.value)}
-                    placeholder="Votre nom"
-                    className="flex-1 px-3 py-1.5 border-2 border-[#0a0a0a] bg-white text-[12px] focus:outline-none focus:border-[#2E6A4A] transition-colors"
-                  />
+                <div className="flex justify-end">
                   <Button variant="primary" size="sm" type="submit" disabled={!newComment.trim()}>
                     <Send className="w-3.5 h-3.5" />
                   </Button>
@@ -337,66 +248,82 @@ export function ValidationSidebar({
                     Aucun commentaire
                   </p>
                 )}
-                {filteredComments.slice().reverse().map((commentaire) => (
-                  <div
-                    key={commentaire.id}
-                    className="border-2 border-[#e0e0dc] p-3 group relative hover:border-[#2E6A4A] transition-colors"
-                  >
-                    <p className="text-[12px] text-[#0a0a0a] mb-1.5 leading-relaxed">{commentaire.texte}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-[#999] font-mono">
-                        {commentaire.auteur} - {commentaire.date}
-                      </span>
-                      {isOwnCommentaire(commentaire.id) && (
-                        <button
-                          onClick={() => onDeleteCommentaire(commentaire.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 transition-all"
-                          title="Supprimer mon commentaire"
-                        >
-                          <Trash2 className="w-3 h-3 text-red-500" />
-                        </button>
+
+                {filteredComments.slice().reverse().map((commentaire) => {
+                  const isEditing = editingId === commentaire.id;
+                  const isOwn = isOwnCommentaire(commentaire.id);
+
+                  return (
+                    <div
+                      key={commentaire.id}
+                      className="border border-[#d5dbd7] bg-white p-3 group relative hover:border-[#2E6A4A] transition-colors"
+                    >
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <textarea
+                            value={editingText}
+                            onChange={(event) => setEditingText(event.target.value)}
+                            className={fieldClass}
+                            rows={3}
+                          />
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="sm" type="button" onClick={() => setEditingId(null)}>
+                              Annuler
+                            </Button>
+                            <Button variant="primary" size="sm" type="button" onClick={() => handleSaveEdit(commentaire)}>
+                              Enregistrer
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-[12px] text-[#0a0a0a] mb-1.5 leading-relaxed">{commentaire.texte}</p>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-[10px] text-[#999] font-mono">
+                              {formatCommentTimestamp(commentaire)}
+                            </span>
+                            {isOwn && (
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => {
+                                    setEditingId(commentaire.id);
+                                    setEditingText(commentaire.texte);
+                                  }}
+                                  className="p-1 hover:bg-[#D3E4D7] transition-all"
+                                  title="Modifier mon commentaire"
+                                >
+                                  <Pencil className="w-3 h-3 text-[#2E6A4A]" />
+                                </button>
+                                <button
+                                  onClick={() => onDeleteCommentaire(commentaire.id)}
+                                  className="p-1 hover:bg-red-50 transition-all"
+                                  title="Supprimer mon commentaire"
+                                >
+                                  <Trash2 className="w-3 h-3 text-red-500" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}
         </div>
 
-        <div className="p-4 bg-[#E5EEE6]">
-          <button
-            onClick={() => setShowExport(!showExport)}
-            className="flex items-center justify-between w-full text-[10px] uppercase tracking-[0.12em] text-[#999] hover:text-[#2E6A4A] transition-colors"
-          >
-            <span className="flex items-center gap-1.5">
-              <Download className="w-3.5 h-3.5" />
-              Exporter les donnees
-            </span>
-            {showExport ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </button>
+      </div>
 
-          {showExport && (
-            <div className="mt-3 space-y-2">
-              <p className="text-[10px] text-[#999]">
-                Telechargez les contributions pour votre SIG ou votre tableur.
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={onExportGeoJSON}
-                  className="flex-1 px-3 py-2 text-[10px] uppercase tracking-wider border-2 border-[#0a0a0a] hover:bg-[#2E6A4A] hover:text-[#D3E4D7] transition-all text-center"
-                >
-                  GeoJSON
-                </button>
-                <button
-                  onClick={onExportCSV}
-                  className="flex-1 px-3 py-2 text-[10px] uppercase tracking-wider border-2 border-[#0a0a0a] hover:bg-[#2E6A4A] hover:text-[#D3E4D7] transition-all text-center"
-                >
-                  CSV
-                </button>
-              </div>
-            </div>
-          )}
+      <div className="border-t border-[#d5dbd7] bg-white grid grid-cols-2 shrink-0">
+        <div className="border-r border-[#d5dbd7] p-3 text-center">
+          <div className="text-2xl text-[#2E6A4A] font-mono">{observationsCount}</div>
+          <div className="text-[10px] uppercase tracking-[0.12em] text-[#4d5853]">Remontees</div>
+        </div>
+        <div className="p-3 text-center">
+          <div className="text-2xl text-[#2E6A4A] font-mono">{commentaires.length}</div>
+          <div className="text-[10px] uppercase tracking-[0.12em] text-[#4d5853]">Commentaires</div>
         </div>
       </div>
     </div>

@@ -29,11 +29,13 @@ export function exportGeoJSON(
         type: 'observation',
         id: o.id,
         categorie: o.categorie,
+        type_autre: o.type_autre,
+        classes_concernees: o.classes_concernees,
         commentaire: o.commentaire,
         auteur: o.auteur,
         organisation: o.organisation,
-        role: o.role,
         date: o.date,
+        heure: o.heure,
         cible_id: o.cible_id,
         corridor_id: o.corridor_id,
         segment_id: o.segment_id,
@@ -44,9 +46,7 @@ export function exportGeoJSON(
         downvotes: o.downvotes,
         score_net: o.upvotes - o.downvotes,
         nb_photos: o.photos?.length ?? 0,
-        danger_fields: o.danger_fields,
-        amenagement_fields: o.amenagement_fields,
-        validation_fields: o.validation_fields,
+        nb_commentaires: o.commentaires?.length ?? 0,
       },
     })),
   ];
@@ -70,13 +70,10 @@ export function exportGeoJSON(
 export function exportCSV(observations: ObservationLibre[]) {
   const headers = [
     'id', 'latitude', 'longitude', 'categorie', 'commentaire',
-    'auteur', 'organisation', 'role', 'date', 'cible_id',
+    'type_autre', 'classes_concernees', 'auteur', 'organisation', 'date', 'heure', 'cible_id',
     'corridor_id', 'segment_id', 'segment_label', 'segment_score_calcule',
     'indice_juge', 'upvotes', 'downvotes', 'score_net',
-    'nb_photos',
-    'danger_type_usager', 'danger_frequence', 'danger_gravite',
-    'amenagement_type_infra', 'amenagement_priorite',
-    'validation_criteres_mal_evalues',
+    'nb_photos', 'nb_commentaires',
   ];
 
   const rows = observations.map((o) => [
@@ -85,10 +82,12 @@ export function exportCSV(observations: ObservationLibre[]) {
     o.longitude,
     o.categorie,
     `"${(o.commentaire || '').replace(/"/g, '""')}"`,
+    `"${(o.type_autre || '').replace(/"/g, '""')}"`,
+    `"${(o.classes_concernees || []).join(' | ').replace(/"/g, '""')}"`,
     `"${(o.auteur || '').replace(/"/g, '""')}"`,
     `"${(o.organisation || '').replace(/"/g, '""')}"`,
-    o.role || '',
     o.date,
+    o.heure || '',
     o.cible_id || '',
     o.corridor_id || '',
     o.segment_id || '',
@@ -99,12 +98,7 @@ export function exportCSV(observations: ObservationLibre[]) {
     o.downvotes,
     o.upvotes - o.downvotes,
     o.photos?.length ?? 0,
-    o.danger_fields?.type_usager || '',
-    o.danger_fields?.frequence || '',
-    o.danger_fields?.gravite || '',
-    o.amenagement_fields?.type_infra || '',
-    o.amenagement_fields?.priorite || '',
-    `"${(o.validation_fields?.criteres_mal_evalues || []).join(', ')}"`,
+    o.commentaires?.length ?? 0,
   ]);
 
   const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');

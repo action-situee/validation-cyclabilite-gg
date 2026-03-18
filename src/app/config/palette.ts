@@ -36,34 +36,46 @@ export const CIBLE_THEMES = Object.entries(THEME_NEON).map(([key, color]) => ({
   label: THEME_LABELS[key] || key,
 }));
 
-/* ── Catégories de retours terrain (croix néon) ── */
+/* ── Catégories de retours terrain ── */
 
 export const OBS_NEON: Record<string, string> = {
-  danger:      '#f72585',
-  amenagement: '#ffd60a',
-  positif:     '#00f5d4',
-  validation:  '#4cc9f0',
+  securite_intersections: '#f72585',
+  giratoire: '#f72585',
+  maillage_alternative: '#f72585',
+  equipement: '#f72585',
+  permeabilite_frontiere: '#f72585',
+  bande_piste: '#f72585',
+  conflits_usage: '#f72585',
+  autre: '#f72585',
 };
 
 export const OBS_LABELS: Record<string, string> = {
-  danger:      'Danger',
-  amenagement: 'Aménagement',
-  positif:     'Point positif',
-  validation:  'Validation d\'indice',
+  securite_intersections: 'Sécurité intersections',
+  giratoire: 'Giratoire',
+  maillage_alternative: 'Maillage et alternative',
+  equipement: 'Équipement',
+  permeabilite_frontiere: 'Perméabilité de la frontière',
+  bande_piste: 'Bande / piste',
+  conflits_usage: 'Conflits d\'usage',
+  autre: 'Autre',
 };
 
-/** Entrées ordonnées pour la légende sidebar (ordre: validation first) */
+/** Entrées ordonnées pour la légende sidebar */
 export const OBS_CATEGORIES = [
-  { key: 'validation',  color: '#4cc9f0', label: 'Validation d\'indice' },
-  { key: 'danger',      color: '#f72585', label: 'Danger signalé' },
-  { key: 'amenagement', color: '#ffd60a', label: 'Aménagement souhaité' },
-  { key: 'positif',     color: '#00f5d4', label: 'Point positif' },
+  { key: 'securite_intersections', color: '#f72585', label: 'Sécurité intersections' },
+  { key: 'giratoire', color: '#f72585', label: 'Giratoire' },
+  { key: 'maillage_alternative', color: '#f72585', label: 'Maillage et alternative' },
+  { key: 'equipement', color: '#f72585', label: 'Équipement' },
+  { key: 'permeabilite_frontiere', color: '#f72585', label: 'Perméabilité de la frontière' },
+  { key: 'bande_piste', color: '#f72585', label: 'Bande / piste' },
+  { key: 'conflits_usage', color: '#f72585', label: 'Conflits d\'usage' },
+  { key: 'autre', color: '#f72585', label: 'Autre' },
 ];
 
 /* ── Labels d'indice jugé ── */
 
 export const INDICE_LABELS: Record<string, string> = {
-  trop_faible: 'Sous-estimé',
-  juste:       'Cohérent',
-  trop_eleve:  'Surestimé',
+  adapte: 'Adapté',
+  sur_estime: 'Sur-estimé',
+  sous_estime: 'Sous-estimé',
 };
