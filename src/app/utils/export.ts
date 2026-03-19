@@ -37,7 +37,7 @@ export function exportGeoJSON(
         date: o.date,
         heure: o.heure,
         cible_id: o.cible_id,
-        corridor_id: o.corridor_id,
+        faisceau_id: o.faisceau_id,
         segment_id: o.segment_id,
         segment_label: o.segment_label,
         segment_score_calcule: o.segment_score_calcule,
@@ -71,7 +71,7 @@ export function exportCSV(observations: ObservationLibre[]) {
   const headers = [
     'id', 'latitude', 'longitude', 'categorie', 'commentaire',
     'type_autre', 'classes_concernees', 'auteur', 'organisation', 'date', 'heure', 'cible_id',
-    'corridor_id', 'segment_id', 'segment_label', 'segment_score_calcule',
+    'faisceau_id', 'segment_id', 'segment_label', 'segment_score_calcule',
     'indice_juge', 'upvotes', 'downvotes', 'score_net',
     'nb_photos', 'nb_commentaires',
   ];
@@ -89,7 +89,7 @@ export function exportCSV(observations: ObservationLibre[]) {
     o.date,
     o.heure || '',
     o.cible_id || '',
-    o.corridor_id || '',
+    o.faisceau_id || '',
     o.segment_id || '',
     `"${(o.segment_label || '').replace(/"/g, '""')}"`,
     o.segment_score_calcule ?? '',

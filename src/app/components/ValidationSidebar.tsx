@@ -19,8 +19,8 @@ interface ValidationSidebarProps {
   onFaisceauChange: (faisceauId: string | null) => void;
   faisceaux: Faisceau[];
   onOpenSurvey: () => void;
-  showCorridors: boolean;
-  onToggleCorridors: () => void;
+  showFaisceaux: boolean;
+  onToggleFaisceaux: () => void;
   commentaires: CommentaireGeneral[];
   onAddCommentaire: (com: CommentaireGeneral) => void;
   onUpdateCommentaire: (com: CommentaireGeneral) => void;
@@ -43,8 +43,8 @@ export function ValidationSidebar({
   onFaisceauChange,
   faisceaux,
   onOpenSurvey,
-  showCorridors,
-  onToggleCorridors,
+  showFaisceaux,
+  onToggleFaisceaux,
   commentaires,
   onAddCommentaire,
   onUpdateCommentaire,
@@ -128,7 +128,7 @@ export function ValidationSidebar({
             <div className="space-y-2 mt-3">
               {[
                 { n: '1', label: 'Remplir le questionnaire general', sub: 'Section Questionnaire ci-dessous' },
-                { n: '2', label: 'Choisir un corridor', sub: 'Selecteur ci-dessous' },
+                { n: '2', label: 'Choisir un faisceau', sub: 'Selecteur ci-dessous' },
                 { n: '3', label: 'Poser des points sur la carte', sub: 'Bouton Ajouter en haut a droite de la carte' },
                 { n: '4', label: 'Laisser un commentaire general', sub: 'Section Commentaires ci-dessous' },
               ].map(({ n, label, sub }, index, steps) => (
@@ -169,7 +169,7 @@ export function ValidationSidebar({
 
         <div className={sectionClass}>
           <h3 className={sectionTitleClass}>
-            Etape 2 · Corridor transfrontalier
+            Etape 2 · Faisceau transfrontalier
           </h3>
 
           <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-[#4d5853] mb-2">
@@ -193,15 +193,15 @@ export function ValidationSidebar({
           </div>
 
           <button
-            onClick={onToggleCorridors}
+            onClick={onToggleFaisceaux}
             className={`mt-2.5 flex items-center gap-2 text-[10px] uppercase tracking-[0.1em] px-2 py-1.5 w-full border transition-all ${
-              showCorridors
+              showFaisceaux
                 ? 'border-[#2E6A4A] text-[#2E6A4A] bg-[#D3E4D7]'
                 : 'border-[#e0e0dc] text-[#999] bg-transparent'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            <span className="flex-1 text-left">Delimitations corridors</span>
+            <span className="flex-1 text-left">Delimitations des faisceaux</span>
           </button>
         </div>
 

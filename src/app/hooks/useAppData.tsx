@@ -5,7 +5,7 @@ import { storageService } from '../utils/storage';
 import { resolveFingerprint } from '../utils/fingerprint';
 import {
   loadCommentairesFromSheet,
-  loadCorridors,
+  loadFaisceaux,
   loadObservationsFromSheet,
 } from '../utils/data-loader';
 import { contributionsApi } from '../utils/api';
@@ -52,9 +52,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Load corridors
+  // Load faisceaux (délimitations)
   useEffect(() => {
-    loadCorridors().then((ext) => {
+    loadFaisceaux().then((ext) => {
       if (ext && ext.length > 0) setFaisceaux(ext);
     });
   }, []);

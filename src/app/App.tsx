@@ -47,8 +47,8 @@ function AppInner() {
   const [basemap, setBasemap] = useState<BasemapMode>(DEFAULT_BASEMAP);
   const [quantileMap, setQuantileMap] = useState<Partial<Record<BikeMetricKey, number[]>>>({});
 
-  // Corridor visibility
-  const [showCorridors, setShowCorridors] = useState(false);
+  // Faisceau visibility (délimitations)
+  const [showFaisceaux, setShowFaisceaux] = useState(false);
 
   // Help modal
   const [showHelp, setShowHelp] = useState(false);
@@ -92,8 +92,8 @@ function AppInner() {
     let result = observations;
     if (selectedFaisceau) {
       result = result.filter((o) => {
-        if (o.corridor_id) {
-          return o.corridor_id === selectedFaisceau;
+        if (o.faisceau_id) {
+          return o.faisceau_id === selectedFaisceau;
         }
         return true;
       });
@@ -108,7 +108,7 @@ function AppInner() {
     if (faisceauId) {
       const f = faisceaux.find((f) => f.id === faisceauId);
       if (f) setFlyTo({ center: f.center, zoom: f.zoom });
-      setShowCorridors(true);
+      setShowFaisceaux(true);
     } else {
       setFlyTo({ center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM });
     }
@@ -285,8 +285,8 @@ function AppInner() {
     onFaisceauChange: handleFaisceauChange,
     faisceaux,
     onOpenSurvey: () => setShowSurvey(true),
-    showCorridors,
-    onToggleCorridors: () => setShowCorridors((value) => !value),
+    showFaisceaux,
+    onToggleFaisceaux: () => setShowFaisceaux((value) => !value),
     commentaires,
     onAddCommentaire: handleAddCommentaire,
     onUpdateCommentaire: handleUpdateCommentaire,
@@ -437,7 +437,7 @@ function AppInner() {
               onMapClick={handleMapClick}
               flyTo={flyTo}
               selectedFaisceau={selectedFaisceau}
-              showCorridors={showCorridors}
+              showFaisceaux={showFaisceaux}
               sidebarLayout={sidebarLayout}
             />
           </Suspense>

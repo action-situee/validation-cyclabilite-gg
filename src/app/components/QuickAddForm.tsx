@@ -134,9 +134,9 @@ export function QuickAddForm({ latitude, longitude, segment, onSubmit, onClose }
       organisation: organisation.trim() || undefined,
       date: now.toISOString().slice(0, 10),
       heure: now.toTimeString().slice(0, 8),
-      corridor_id: segment?.corridor_id,
+      faisceau_id: segment?.faisceau_id,
       segment_id: segment?.segment_id,
-      segment_label: segment ? `${segment.corridor_name} - segment ${segment.segment_id}` : undefined,
+      segment_label: segment ? `${segment.faisceau_nom} - segment ${segment.segment_id}` : undefined,
       segment_score_calcule: segment?.bike_index ?? undefined,
       indice_juge: indiceJuge as ObservationIndiceFeedback,
       upvotes: 0,
@@ -154,10 +154,10 @@ export function QuickAddForm({ latitude, longitude, segment, onSubmit, onClose }
           <div className="flex items-center gap-2 min-w-0">
             <MapPin className="w-5 h-5 text-[#f72585] shrink-0" />
             <div className="min-w-0">
-              <h2 className="text-[12px] uppercase tracking-[0.12em]">Nouvelle remontée</h2>
+              <h2 className="text-[12px] uppercase tracking-[0.12em]">Nouvelle observation</h2>
               {segment ? (
                 <p className="text-[10px] text-[#999] font-mono">
-                  {segment.corridor_name} · segment {segment.segment_id}
+                  {segment.faisceau_nom} · segment {segment.segment_id}
                 </p>
               ) : (
                 <p className="text-[10px] text-[#999] font-mono">
@@ -172,34 +172,23 @@ export function QuickAddForm({ latitude, longitude, segment, onSubmit, onClose }
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto flex-1">
-          <div>
-            <label className="block text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c] mb-2">
-              Type de retour
-            </label>
-            <ToggleGroup
-              options={RETURN_TYPES}
-              value={categorie}
-              onChange={(value) => setCategorie(value as ObservationCategory)}
-            />
-          </div>
-
           {categorie === 'autre' && (
             <div>
               <label className="block text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c] mb-1">
-                Préciser le type
+                Préciser :
               </label>
               <input
                 type="text"
                 value={typeAutre}
                 onChange={(event) => setTypeAutre(event.target.value)}
-                className="w-full px-3 py-2 border-2 border-[#0a0a0a] bg-white focus:outline-none focus:border-[#f72585] transition-colors text-[13px]"
+                className="w-full px-3 py-2 border border-[#d0d4ce] bg-white focus:outline-none focus:border-[#f72585] transition-colors text-[13px]"
                 placeholder="Ex : stationnement, revêtement, signalisation..."
               />
             </div>
           )}
 
           <div>
-            <label className="block text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c] mb-2">
+            <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-2">
               Classe concernée
             </label>
             <MultiSelect
@@ -210,7 +199,18 @@ export function QuickAddForm({ latitude, longitude, segment, onSubmit, onClose }
           </div>
 
           <div>
-            <label className="block text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c] mb-2">
+            <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-2">
+              Objet concerné
+            </label>
+            <ToggleGroup
+              options={RETURN_TYPES}
+              value={categorie}
+              onChange={(value) => setCategorie(value as ObservationCategory)}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-2">
               L’indice vous semble
             </label>
             <ToggleGroup
@@ -221,13 +221,13 @@ export function QuickAddForm({ latitude, longitude, segment, onSubmit, onClose }
           </div>
 
           <div>
-            <label className="block text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c] mb-1">
+            <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-1">
               Commentaire / suggestion <span className="text-red-600">*</span>
             </label>
             <textarea
               value={commentaire}
               onChange={(event) => setCommentaire(event.target.value)}
-              className="w-full px-3 py-2 border-2 border-[#0a0a0a] bg-white resize-none focus:outline-none focus:border-[#f72585] transition-colors text-[13px]"
+              className="w-full px-3 py-2 border border-[#d0d4ce] bg-white resize-none focus:outline-none focus:border-[#f72585] transition-colors text-[13px]"
               rows={4}
               placeholder="Décrivez le problème, le point d’attention ou la suggestion d’amélioration..."
               required
@@ -239,7 +239,7 @@ export function QuickAddForm({ latitude, longitude, segment, onSubmit, onClose }
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c] mb-1">
+              <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-1">
                 Nom
               </label>
               <input
@@ -251,7 +251,7 @@ export function QuickAddForm({ latitude, longitude, segment, onSubmit, onClose }
               />
             </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c] mb-1">
+              <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-1">
                 Entité
               </label>
               <input

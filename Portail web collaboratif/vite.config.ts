@@ -16,6 +16,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Reuse the repo-level /public (contains /data/corridors.geojson, etc.)
+  publicDir: path.resolve(__dirname, '../public'),
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],

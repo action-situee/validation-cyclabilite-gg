@@ -32,7 +32,7 @@ interface MapProps {
   onMapClick: (lat: number, lng: number, segment?: BikeSegment | null) => void;
   flyTo?: { center: [number, number]; zoom: number } | null;
   selectedFaisceau?: string | null;
-  showCorridors?: boolean;
+  showFaisceaux?: boolean;
   sidebarLayout?: string;
 }
 
@@ -156,23 +156,44 @@ function findFaisceauForPoint(
   return candidates.find((faisceau) => pointInPolygon(point, faisceau.polygon));
 }
 
-function buildCorridorsGeoJson(faisceaux: Faisceau[]) {
-  return {
-    type: 'FeatureCollection',
-    features: faisceaux.map((faisceau) => ({
-      type: 'Feature',
-      properties: {
-        id: faisceau.id,
-        nom: faisceau.nom,
-        color: faisceau.color,
-      },
-      geometry: {
-        type: 'Polygon',
-        coordinates: [faisceau.polygon.map(([lat, lng]) => [lng, lat])],
-      },
-    })),
-  };
+function normalizeLatLngOrLngLatToLngLat(value: [number, number]): [number, number] | null {
+  const a = Number(value[0]);
+  const b = Number(value[1]);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+
+  // We operate around Genève: lat ~ 46, lng ~ 6.
+  // If one component looks like a latitude (>20) and the other like a longitude (<20),
+  // we can infer orientation.
+  if (Math.abs(a) > 20 && Math.abs(b) < 20) {
+    const lat = a;
+    const lng = b;
+    return lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90 ? [lng, lat] : null;
+  }
+  if (Math.abs(a) < 20 && Math.abs(b) > 20) {
+    const lng = a;
+    const lat = b;
+    return lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90 ? [lng, lat] : null;
+  }
+
+  // Fallback: assume stored as [lat, lng]
+  const lat = a;
+  const lng = b;
+  return lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90 ? [lng, lat] : null;
 }
+
+function closeLngLatRingIfNeeded(ring: [number, number][]) {
+  if (ring.length < 3) return ring;
+  const first = ring[0];
+  const last = ring[ring.length - 1];
+  if (first[0] === last[0] && first[1] === last[1]) return ring;
+  return [...ring, first];
+}
+
+type OverlayFaisceauPath = {
+  id: string;
+  path: string;
+  selected: boolean;
+};
 
 function buildCiblesGeoJson(cibles: Cible[]) {
   return {
@@ -313,9 +334,9 @@ function buildSelectedSegmentFromFeature(
   return {
     segment_id: featureId,
     spatial_unit: spatialUnit,
-    corridor_id: matchedFaisceau?.id || '',
-    corridor_name: matchedFaisceau?.nom || (spatialUnit === 'carreau200' ? 'Grand Geneve · carreau 200 m' : 'Grand Geneve'),
-    corridor_color: matchedFaisceau?.color || '#2E6A4A',
+    faisceau_id: matchedFaisceau?.id || '',
+    faisceau_nom: matchedFaisceau?.nom || (spatialUnit === 'carreau200' ? 'Grand Geneve · carreau 200 m' : 'Grand Geneve'),
+    faisceau_color: matchedFaisceau?.color || '#2E6A4A',
     bike_index: bikeIndex,
     bike_index_class: getMetricClass(bikeIndex),
     length: toNumber(properties.length) || 0,
@@ -703,20 +724,25 @@ function setPerimeterVisibility(map: maplibregl.Map, visible: boolean) {
 
 function reorderMapLayers(map: maplibregl.Map) {
   [
-    'corridors-fill',
-    'corridors-outline',
-    'carreau200-fill',
-    'carreau200-outline',
-  ].forEach((layerId) => moveLayerToTop(map, layerId));
-  moveWaterLayersAboveCarreaux(map);
-  [
     'segments-layer',
-    'perimeter-casing',
-    'perimeter-outline',
     'segments-selected-halo',
     'segments-selected',
     'segments-hit-area',
   ].forEach((layerId) => moveLayerToTop(map, layerId));
+
+  // Place overlays (carreaux) above index layers
+  [
+    'carreau200-fill',
+    'carreau200-outline',
+  ].forEach((layerId) => moveLayerToTop(map, layerId));
+
+  // Then bring the perimeter frontier above both the index and carreaux
+  [
+    'perimeter-casing',
+    'perimeter-outline',
+  ].forEach((layerId) => moveLayerToTop(map, layerId));
+
+  moveWaterLayersAboveCarreaux(map);
   moveLabelLayersToTop(map);
   bringPointLayersToFront(map);
 }
@@ -779,7 +805,7 @@ function MapInner({
   onMapClick,
   flyTo,
   selectedFaisceau,
-  showCorridors = true,
+  showFaisceaux = true,
   sidebarLayout = 'none-none',
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -818,6 +844,7 @@ function MapInner({
   const observationsRef = useRef(observations);
   const showLabelsRef = useRef(false);
   const showPerimeterRef = useRef(true);
+  const showFaisceauxRef = useRef(Boolean(showFaisceaux));
   const carreauAvailableRef = useRef(Boolean(BIKE_CARREAU200_PM_TILES_URL));
   const perimeterAvailableRef = useRef(Boolean(PERIMETER_PM_TILES_URL));
   const [mapError, setMapError] = useState(false);
@@ -832,6 +859,7 @@ function MapInner({
   const [perimeterAvailable, setPerimeterAvailable] = useState(Boolean(PERIMETER_PM_TILES_URL));
   const [cameraDebug, setCameraDebug] = useState<CameraState>(cameraStateRef.current);
   const [cursorDebug, setCursorDebug] = useState<{ lng: number; lat: number } | null>(null);
+  const [overlayFaisceaux, setOverlayFaisceaux] = useState<OverlayFaisceauPath[]>([]);
 
   useEffect(() => {
     onCibleClickRef.current = onCibleClick;
@@ -896,6 +924,10 @@ function MapInner({
   useEffect(() => {
     observationsRef.current = observations;
   }, [observations]);
+
+  useEffect(() => {
+    showFaisceauxRef.current = Boolean(showFaisceaux);
+  }, [showFaisceaux]);
 
   useEffect(() => {
     showLabelsRef.current = showLabels;
@@ -1095,38 +1127,6 @@ function MapInner({
       });
     }
 
-    if (!map.getSource('corridors')) {
-      map.addSource('corridors', {
-        type: 'geojson',
-        data: buildCorridorsGeoJson(faisceauxRef.current) as any,
-      });
-    }
-
-    if (!map.getLayer('corridors-fill')) {
-      map.addLayer({
-        id: 'corridors-fill',
-        type: 'fill',
-        source: 'corridors',
-        paint: {
-          'fill-color': ['coalesce', ['get', 'color'], '#2E6A4A'],
-          'fill-opacity': 0.06,
-        },
-      });
-    }
-
-    if (!map.getLayer('corridors-outline')) {
-      map.addLayer({
-        id: 'corridors-outline',
-        type: 'line',
-        source: 'corridors',
-        paint: {
-          'line-color': ['coalesce', ['get', 'color'], '#2E6A4A'],
-          'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1, 11, 1.6, 14, 2.3],
-          'line-opacity': 0.72,
-        },
-      });
-    }
-
     if (!map.getSource('observations')) {
       map.addSource('observations', {
         type: 'geojson',
@@ -1216,10 +1216,11 @@ function MapInner({
         source: 'cibles',
         paint: {
           'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 5.2, 10, 6.2, 13, 7.6],
-          'circle-color': ['coalesce', ['get', 'markerColor'], '#2E6A4A'],
+          // Debug: make GeoJSON circles visible to validate GeoJSON rendering pipeline
+          'circle-color': '#00ffff',
           'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 7, 1.6, 10, 1.9, 13, 2.2],
           'circle-stroke-color': '#0a0a0a',
-          'circle-opacity': 0,
+          'circle-opacity': 1,
         },
       });
     }
@@ -1370,6 +1371,21 @@ function MapInner({
       const handleMapClick = (event: maplibregl.MapMouseEvent & maplibregl.EventData) => {
         if (!map.isStyleLoaded()) return;
 
+        if (showFaisceauxRef.current) {
+          const insideFaisceau = Boolean(
+            findFaisceauForPoint(
+              [event.lngLat.lng, event.lngLat.lat],
+              faisceauxRef.current,
+              selectedFaisceauRef.current,
+            ),
+          );
+          if (!insideFaisceau) {
+            // Force contributions to stay inside the visible perimeter.
+            onMapBackgroundClickRef.current?.();
+            return;
+          }
+        }
+
         if (addModeRef.current) {
           const nearestSegmentFeature = findNearestSegmentFeature(map, event.point);
           const nearestSegment = nearestSegmentFeature?.properties
@@ -1440,6 +1456,24 @@ function MapInner({
         if (!map.isStyleLoaded()) {
           map.getCanvas().style.cursor = addModeRef.current ? 'crosshair' : '';
           return;
+        }
+
+        if (showFaisceauxRef.current) {
+          const insideFaisceau = Boolean(
+            findFaisceauForPoint(
+              [event.lngLat.lng, event.lngLat.lat],
+              faisceauxRef.current,
+              selectedFaisceauRef.current,
+            ),
+          );
+          if (!insideFaisceau) {
+            if (hoveredSegmentIdRef.current !== null) {
+              hoveredSegmentIdRef.current = null;
+              onHoverSegmentRef.current(null);
+            }
+            map.getCanvas().style.cursor = addModeRef.current ? 'crosshair' : '';
+            return;
+          }
         }
 
         const cibleFeature =
@@ -1634,7 +1668,7 @@ function MapInner({
 
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
-    setSourceData(mapRef.current, 'corridors', buildCorridorsGeoJson(faisceaux));
+    // Faisceaux are rendered via SVG overlay, not as MapLibre GeoJSON layers.
   }, [mapReady, faisceaux]);
 
   useEffect(() => {
@@ -1743,46 +1777,7 @@ function MapInner({
     reorderMapLayers(mapRef.current);
   }, [mapReady, displayScale, addMode, carreauAvailable]);
 
-  useEffect(() => {
-    if (!mapReady || !mapRef.current) return;
-    const map = mapRef.current;
-
-    setLayerVisibility(map, 'corridors-fill', showCorridors);
-    setLayerVisibility(map, 'corridors-outline', showCorridors);
-
-    if (map.getLayer('corridors-fill')) {
-      map.setPaintProperty(
-        'corridors-fill',
-        'fill-opacity',
-        showCorridors
-          ? selectedFaisceau
-            ? ['case', ['==', ['get', 'id'], selectedFaisceau], 0.12, 0.025]
-            : 0.06
-          : 0,
-      );
-    }
-
-    if (map.getLayer('corridors-outline')) {
-      map.setPaintProperty(
-        'corridors-outline',
-        'line-opacity',
-        showCorridors
-          ? selectedFaisceau
-            ? ['case', ['==', ['get', 'id'], selectedFaisceau], 0.92, 0.24]
-            : 0.72
-          : 0,
-      );
-      map.setPaintProperty(
-        'corridors-outline',
-        'line-width',
-        selectedFaisceau
-          ? ['case', ['==', ['get', 'id'], selectedFaisceau], 2.4, 1.1]
-          : ['interpolate', ['linear'], ['zoom'], 8, 1, 11, 1.6, 14, 2.3],
-      );
-    }
-
-    reorderMapLayers(map);
-  }, [mapReady, selectedFaisceau, showCorridors]);
+  // Faisceaux are rendered via SVG overlay (see below).
 
   useEffect(() => {
     if (!mapReady || !mapRef.current || !flyTo) return;
@@ -1816,6 +1811,60 @@ function MapInner({
     setPerimeterVisibility(mapRef.current, showPerimeter && perimeterAvailable);
     reorderMapLayers(mapRef.current);
   }, [mapReady, showPerimeter, perimeterAvailable]);
+
+  // Fallback: render faisceau polygons as an SVG overlay.
+  // This is needed because GeoJSON layers are not rendering in the current MapLibre setup,
+  // while vector-tile layers do render.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map || !showFaisceaux) {
+      setOverlayFaisceaux([]);
+      return;
+    }
+
+    const buildOverlay = () => {
+      const next: OverlayFaisceauPath[] = [];
+      faisceaux.forEach((faisceau) => {
+        const ringLngLat = closeLngLatRingIfNeeded(
+          (faisceau.polygon || [])
+            .map((pair) => normalizeLatLngOrLngLatToLngLat(pair))
+            .filter(Boolean) as [number, number][],
+        );
+        if (ringLngLat.length < 4) return;
+
+        const projected = ringLngLat.map(([lng, lat]) => map.project([lng, lat]));
+        if (projected.length < 3) return;
+
+        const d = [
+          `M ${projected[0].x.toFixed(1)} ${projected[0].y.toFixed(1)}`,
+          ...projected.slice(1).map((p) => `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`),
+          'Z',
+        ].join(' ');
+
+        next.push({
+          id: faisceau.id,
+          path: d,
+          selected: Boolean(selectedFaisceau) && faisceau.id === selectedFaisceau,
+        });
+      });
+      setOverlayFaisceaux(next);
+    };
+
+    buildOverlay();
+    map.on('move', buildOverlay);
+    map.on('zoom', buildOverlay);
+    map.on('rotate', buildOverlay);
+    map.on('pitch', buildOverlay);
+    map.on('resize', buildOverlay);
+
+    return () => {
+      map.off('move', buildOverlay);
+      map.off('zoom', buildOverlay);
+      map.off('rotate', buildOverlay);
+      map.off('pitch', buildOverlay);
+      map.off('resize', buildOverlay);
+    };
+  }, [mapReady, showFaisceaux, faisceaux, selectedFaisceau]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1917,6 +1966,27 @@ function MapInner({
   return (
     <div className="w-full h-full relative">
       <div ref={containerRef} className="w-full h-full" />
+
+      {overlayFaisceaux.length > 0 && (
+        <svg
+          className="absolute inset-0 pointer-events-none"
+          style={{ zIndex: 4 }}
+          width="100%"
+          height="100%"
+        >
+          {/* Outlines (violet) */}
+          {overlayFaisceaux.map((item) => (
+            <path
+              key={item.id}
+              d={item.path}
+              fill="none"
+              stroke="#7b2ff7"
+              strokeWidth={item.selected ? 3.6 : 2.6}
+              opacity={1}
+            />
+          ))}
+        </svg>
+      )}
 
       <div className="absolute z-10 pointer-events-none" style={{ top: 16, left: 16 }}>
         <div

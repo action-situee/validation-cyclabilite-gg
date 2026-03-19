@@ -19,6 +19,7 @@
  */
 
 import { Cible, Faisceau } from '../types';
+const env = import.meta.env as Record<string, string | undefined>;
 
 // ─────────────────────────────────────────────────
 // SOURCES DE DONNÉES – à configurer ici
@@ -37,7 +38,7 @@ import { Cible, Faisceau } from '../types';
  * Propriétés optionnelles :
  *   description, centerline (JSON array de [lat,lng])
  */
-export const CORRIDORS_GEOJSON_URL = '';
+export const CORRIDORS_GEOJSON_URL = env.VITE_CORRIDORS_GEOJSON_URL || '/data/corridors.geojson';
 
 /**
  * URL du GeoJSON des points d'attention (Point).

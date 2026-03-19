@@ -19,6 +19,7 @@
  */
 
 import { BikeSegment, Cible, CommentaireGeneral, Faisceau, ObservationLibre } from '../types';
+import { FAISCEAUX as DEFAULT_FAISCEAUX } from '../mock-data/faisceaux';
 
 const env = import.meta.env as Record<string, string | undefined>;
 const DEFAULT_CIBLES_SHEETS_CSV_URL = '/data/google-sheets/cibles-mock.csv';
@@ -31,19 +32,24 @@ const LOCAL_MOCKS_ONLY = true;
 // ─────────────────────────────────────────────────
 
 /**
- * URL du GeoJSON des corridors (Polygon ou MultiPolygon).
- * Peut être :
- *  - un fichier local servi statiquement (ex: '/data/corridors.geojson')
- *  - une URL GitHub raw
- *  - un Google Drive shared link (voir README)
+ * Délimitations des faisceaux.
  *
- * Chaque Feature doit contenir ces propriétés :
- *   id, nom, color, center_lat, center_lng, zoom, label_lat, label_lng
+ * On charge **deux fichiers** GeoJSON (Polygon/MultiPolygon) et on associe chaque fichier
+ * à un `faisceau.id` stable (pas de dépendance à des `properties.id` dans le GeoJSON).
  *
- * Propriétés optionnelles :
- *   description, centerline (JSON array de [lat,lng])
+ * Par défaut:
+ * - Gaillard / Thônex / Eaux-Vives → `/data/corridors/f3_perimetre_arrondi.geojson`
+ * - Saint-Julien / PLO / Genève    → `/data/corridors/f4_perimetre_arrondi.geojson`
+ *
+ * Override possible via env:
+ * - `VITE_FAISCEAU_GAILLARD_GEOJSON_URL`
+ * - `VITE_FAISCEAU_STJULIEN_GEOJSON_URL`
  */
-export const CORRIDORS_GEOJSON_URL = env.VITE_CORRIDORS_GEOJSON_URL || '/data/corridors.geojson';
+export const FAISCEAU_GAILLARD_GEOJSON_URL =
+  env.VITE_FAISCEAU_GAILLARD_GEOJSON_URL || '/data/corridors/f3_perimetre_arrondi.geojson';
+
+export const FAISCEAU_STJULIEN_GEOJSON_URL =
+  env.VITE_FAISCEAU_STJULIEN_GEOJSON_URL || '/data/corridors/f4_perimetre_arrondi.geojson';
 
 /**
  * URL du GeoJSON des points d'attention (Point).
@@ -231,88 +237,101 @@ function parseObservationComments(value: string): ObservationLibre['commentaires
 
 
 // ─────────────────────────────────────────────────
-// CORRIDORS – chargement GeoJSON
+// FAISCEAUX – chargement des délimitations GeoJSON
 // ─────────────────────────────────────────────────
 
 /**
- * Convertit une Feature GeoJSON (Polygon/MultiPolygon) en Faisceau.
- *
- * Coordonnées GeoJSON = [lng, lat] → on inverse en [lat, lng] pour Leaflet.
+ * Coordonnées GeoJSON = [lng, lat].
+ * Dans l'app on stocke les polygones en [lat, lng] (Leaflet-style), puis MapLibre
+ * ré-inverse au moment de construire le GeoJSON de rendu.
  */
-function featureToFaisceau(feature: any): Faisceau | null {
-  const p = feature.properties || {};
-  const geom = feature.geometry;
-  if (!geom || !p.id) return null;
+function normalizeLngLatToLatLng(coord: unknown): [number, number] | null {
+  if (!Array.isArray(coord) || coord.length < 2) return null;
+  const a = Number(coord[0]);
+  const b = Number(coord[1]);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
 
-  // Extraire le ring principal du polygone
-  let ring: [number, number][] = [];
-  if (geom.type === 'Polygon' && geom.coordinates?.[0]) {
-    ring = geom.coordinates[0].map(([lng, lat]: number[]) => [lat, lng] as [number, number]);
-  } else if (geom.type === 'MultiPolygon' && geom.coordinates?.[0]?.[0]) {
-    ring = geom.coordinates[0][0].map(([lng, lat]: number[]) => [lat, lng] as [number, number]);
-  }
-  if (ring.length === 0) return null;
+  // Expecting [lng, lat] around Genève ~ [6.x, 46.x].
+  // If swapped, values will look like [46.x, 6.x].
+  const looksSwapped = Math.abs(a) > 20 && Math.abs(b) < 20;
+  const lng = looksSwapped ? b : a;
+  const lat = looksSwapped ? a : b;
 
-  // Calculer le bounds
-  let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
-  ring.forEach(([lat, lng]) => {
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
-    if (lng < minLng) minLng = lng;
-    if (lng > maxLng) maxLng = lng;
-  });
-
-  // Centerline optionnelle (stockée en propriété JSON)
-  let centerline: [number, number][] = [];
-  if (p.centerline) {
-    try {
-      centerline = typeof p.centerline === 'string' ? JSON.parse(p.centerline) : p.centerline;
-    } catch { /* ignore */ }
-  }
-  // Fallback : générer une centerline à partir du centre vertical du polygon
-  if (centerline.length === 0) {
-    const midLat = (minLat + maxLat) / 2;
-    const midLng = (minLng + maxLng) / 2;
-    centerline = [[midLat, minLng], [midLat, midLng], [midLat, maxLng]];
-  }
-
-  return {
-    id: String(p.id),
-    nom: String(p.nom || p.name || p.id),
-    description: p.description || undefined,
-    center: [
-      p.center_lat ? Number(p.center_lat) : (minLat + maxLat) / 2,
-      p.center_lng ? Number(p.center_lng) : (minLng + maxLng) / 2,
-    ],
-    zoom: p.zoom ? Number(p.zoom) : 13,
-    bounds: [[minLat, minLng], [maxLat, maxLng]],
-    color: String(p.color || '#2E6A4A'),
-    labelAnchor: [
-      p.label_lat ? Number(p.label_lat) : maxLat + 0.002,
-      p.label_lng ? Number(p.label_lng) : (minLng + maxLng) / 2,
-    ],
-    centerline,
-    polygon: ring,
-  };
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return [lat, lng];
 }
 
-export async function loadCorridorsFromGeoJSON(): Promise<Faisceau[] | null> {
-  if (!CORRIDORS_GEOJSON_URL) return null;
+function extractLatLngRingFromGeometry(geometry: any): [number, number][] {
+  if (!geometry) return [];
 
+  // Polygon: coordinates[ring][pos][lng,lat]
+  if (geometry.type === 'Polygon' && Array.isArray(geometry.coordinates?.[0])) {
+    return geometry.coordinates[0]
+      .map(normalizeLngLatToLatLng)
+      .filter(Boolean) as [number, number][];
+  }
+
+  // MultiPolygon: coordinates[poly][ring][pos][lng,lat]
+  if (geometry.type === 'MultiPolygon' && Array.isArray(geometry.coordinates?.[0]?.[0])) {
+    return geometry.coordinates[0][0]
+      .map(normalizeLngLatToLatLng)
+      .filter(Boolean) as [number, number][];
+  }
+
+  return [];
+}
+
+function closeRingIfNeeded(ring: [number, number][]): [number, number][] {
+  if (ring.length < 3) return ring;
+  const first = ring[0];
+  const last = ring[ring.length - 1];
+  if (first[0] === last[0] && first[1] === last[1]) return ring;
+  return [...ring, first];
+}
+
+async function loadFaisceauPolygonFromGeoJSON(url: string): Promise<[number, number][] | null> {
   try {
-    const res = await fetch(CORRIDORS_GEOJSON_URL);
-    if (!res.ok) { console.warn(`[data-loader] Corridors HTTP ${res.status}`); return null; }
-
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.warn(`[data-loader] Faisceau GeoJSON HTTP ${res.status} (${url})`);
+      return null;
+    }
     const geojson = await res.json();
-    const features = geojson.features || [];
-    const faisceaux = features.map(featureToFaisceau).filter(Boolean) as Faisceau[];
-
-    console.log(`[data-loader] ${faisceaux.length} corridors chargés depuis GeoJSON`);
-    return faisceaux.length > 0 ? faisceaux : null;
+    const feature = (geojson?.features || [])[0];
+    const ring = extractLatLngRingFromGeometry(feature?.geometry);
+    const closed = closeRingIfNeeded(ring);
+    return closed.length >= 4 ? closed : null;
   } catch (err) {
-    console.warn('[data-loader] Erreur chargement corridors :', err);
+    console.warn('[data-loader] Erreur chargement faisceau GeoJSON :', err);
     return null;
   }
+}
+
+export async function loadFaisceauxFromGeoJSON(): Promise<Faisceau[] | null> {
+  const baseById = new Map(DEFAULT_FAISCEAUX.map((f) => [f.id, f] as const));
+
+  const [gaillardRing, stjulienRing] = await Promise.all([
+    loadFaisceauPolygonFromGeoJSON(FAISCEAU_GAILLARD_GEOJSON_URL),
+    loadFaisceauPolygonFromGeoJSON(FAISCEAU_STJULIEN_GEOJSON_URL),
+  ]);
+
+  const gaillardBase = baseById.get('thonex_gaillard');
+  const stjulienBase = baseById.get('plo_stjulien');
+  if (!gaillardBase || !stjulienBase) {
+    console.warn('[data-loader] Faisceaux mock introuvables (ids attendus)');
+    return null;
+  }
+
+  const faisceaux: Faisceau[] = [
+    gaillardRing ? { ...gaillardBase, polygon: gaillardRing } : gaillardBase,
+    stjulienRing ? { ...stjulienBase, polygon: stjulienRing } : stjulienBase,
+  ];
+
+  console.log(
+    `[data-loader] Faisceaux chargés (délimitations): gaillard=${!!gaillardRing}, stjulien=${!!stjulienRing}`,
+  );
+
+  return faisceaux;
 }
 
 
@@ -525,12 +544,12 @@ export async function loadCibles(): Promise<Cible[] | null> {
 }
 
 /**
- * Charge les corridors :
+ * Charge les faisceaux (délimitations) :
  *   1. GeoJSON
  *   2. null (→ mock data en fallback dans useAppData)
  */
-export async function loadCorridors(): Promise<Faisceau[] | null> {
-  return loadCorridorsFromGeoJSON();
+export async function loadFaisceaux(): Promise<Faisceau[] | null> {
+  return loadFaisceauxFromGeoJSON();
 }
 
 function lineStringToLatLngs(geometry: any): [number, number][] {
@@ -560,9 +579,9 @@ function featureToBikeSegment(feature: any): BikeSegment | null {
 
   return {
     segment_id: String(p.segment_id),
-    corridor_id: String(p.corridor_id || ''),
-    corridor_name: String(p.corridor_name || ''),
-    corridor_color: String(p.corridor_color || '#2E6A4A'),
+    faisceau_id: String(p.faisceau_id || p.corridor_id || ''),
+    faisceau_nom: String(p.faisceau_nom || p.corridor_name || ''),
+    faisceau_color: String(p.faisceau_color || p.corridor_color || '#2E6A4A'),
     bike_index:
       typeof p.bike_index === 'number' ? p.bike_index : p.bike_index ? Number(p.bike_index) : null,
     bike_index_class: String(p.bike_index_class || 'non_evalue'),

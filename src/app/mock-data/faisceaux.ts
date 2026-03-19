@@ -3,7 +3,7 @@ import { Faisceau } from '../types';
 export const FAISCEAUX: Faisceau[] = [
   {
     id: 'plo_stjulien',
-    nom: 'Saint-Julien – PLO – Genève',
+    nom: 'Saint-Julien · PLO · Carouge',
     description: 'Corridor sud : de Saint-Julien-en-Genevois à Genève via Plan-les-Ouates et Bardonnex',
     center: [46.158, 6.112],
     zoom: 13,

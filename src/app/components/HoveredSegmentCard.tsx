@@ -62,7 +62,7 @@ export function HoveredSegmentCard({
           )}
         </div>
         <p className="text-[12px] text-[#0a0a0a] leading-relaxed">
-          {segment?.corridor_name || emptyStateLabel}
+          {segment?.faisceau_nom || emptyStateLabel}
         </p>
         <button
           type="button"

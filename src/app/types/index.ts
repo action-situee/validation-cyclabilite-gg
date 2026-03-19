@@ -85,7 +85,7 @@ export interface ObservationLibre {
   date: string;
   heure?: string;
   cible_id?: string;
-  corridor_id?: string;
+  faisceau_id?: string;
   segment_id?: string;
   segment_label?: string;
   segment_score_calcule?: number;
@@ -130,9 +130,9 @@ export interface Faisceau {
 export interface BikeSegment {
   segment_id: string;
   spatial_unit?: 'segment' | 'carreau200';
-  corridor_id: string;
-  corridor_name: string;
-  corridor_color: string;
+  faisceau_id: string;
+  faisceau_nom: string;
+  faisceau_color: string;
   bike_index: number | null;
   bike_index_class: string;
   length: number;
