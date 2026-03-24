@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-Ce portail web collaboratif permet de valider et challenger l'indice de cyclabilité transfrontalier du Grand Genève. Il s'agit d'un prototype fonctionnel prêt à être connecté à de vraies données.
+Ce portail web collaboratif permet de valider et challenger l'indice de cyclabilité transfrontalier du Grand Genève. Le deploiement courant lit l'indice depuis les sorties atlas publiees, les contributions depuis D1 via `/api`, et les tuiles reseau depuis R2 avec CORS explicite.
 
 ## Fonctionnalités principales
 
@@ -37,20 +37,7 @@ Ce portail web collaboratif permet de valider et challenger l'indice de cyclabil
 ## Architecture technique
 
 ### Structure du projet
-```
-/src
-  /app
-    /components       # Composants réutilisables
-    /pages           # Pages principales (MapPage, SynthesePage, GaleriePage)
-    /types           # Types TypeScript
-    /utils           # Utilitaires (CSV parser, storage, synthèse)
-    /mock-data       # Données mockées pour les deux faisceaux
-    routes.tsx       # Configuration React Router
-    App.tsx          # Point d'entrée de l'application
-  /styles
-    theme.css        # Variables CSS et thème
-    leaflet.css      # Styles personnalisés pour Leaflet
-```
+Le front actif vit dans `src/app/`, les endpoints Pages Functions dans `functions/api/`, les sorties atlas dans `public/data/atlas/` et les migrations D1 dans `migrations/`.
 
 ### Technologies utilisées
 - **React 18** avec TypeScript
@@ -64,36 +51,16 @@ Ce portail web collaboratif permet de valider et challenger l'indice de cyclabil
 ## Source de données
 
 ### Configuration actuelle
-Le portail est configuré pour charger des données depuis un CSV Google Sheets publié, mais fonctionne actuellement avec des données mockées en local.
+Le portail lit les contributions exclusivement via l'API `/api`, stockee en D1. Les couches de reseau sont servies par PMTiles et les quantiles par `public/data/atlas/`.
 
 **URL CSV configurée** :
 ```
 https://docs.google.com/spreadsheets/d/e/2PACX-1vQQZ4HanB-X05k-nt7MR7wJlNh33ILlx_UEoWXYRGO6rnGMLCVW1tcmbPdFVVK8YWlvq9drJ6HXdJKA/pub?output=csv
 ```
 
-### Données mockées
-Le prototype inclut des données mockées pour les deux faisceaux :
-- **Thonex - Gaillard** : 5 cibles
-- **Plan-les-Ouates - Saint-Julien** : 6 cibles
-
-Ces données sont stockées dans `/src/app/mock-data/cibles.ts` et `/src/app/mock-data/retours.ts`.
-
 ## Persistence des données
 
-### Mode actuel : LocalStorage
-Les retours questionnaire sont actuellement stockés dans le `localStorage` du navigateur.
-
-### Migration vers backend
-Le code est structuré pour faciliter la migration vers un backend réel :
-
-1. **Interface de service** dans `/src/app/utils/storage.ts`
-2. **BackendService stub** prêt à être implémenté
-3. Points d'intégration clairement identifiés
-
-Pour connecter un backend :
-1. Implémenter les méthodes du `BackendService`
-2. Remplacer les appels à `storageService` par `backendService`
-3. Configurer les endpoints API
+Les retours terrain, commentaires generaux et questionnaires sont stockes en D1 via les endpoints `/api/observations`, `/api/commentaires` et `/api/surveys`.
 
 ## Utilisation
 
@@ -161,8 +128,8 @@ Formulaire complet avec :
 ## Personnalisation
 
 ### Ajouter un nouveau faisceau
-1. Ajoutez les cibles dans `/src/app/mock-data/cibles.ts`
-2. Mettez à jour les options de filtrage dans `/src/app/components/LeftPanel.tsx`
+1. Publiez son perimetre GeoJSON dans `public/data/corridors/` ou exposez-le par URL.
+2. Publiez ses segments / quantiles dans les sorties atlas ou dans vos PMTiles.
 
 ### Modifier les critères d'évaluation
 1. Mettez à jour les types dans `/src/app/types/index.ts`

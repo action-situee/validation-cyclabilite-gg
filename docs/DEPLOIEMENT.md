@@ -50,24 +50,9 @@ migrations_dir = "migrations"
 - `VITE_PM_TILES_BIKE_SEGMENT` si vous ne servez pas `public/tiles/bike_agglo_segment.pmtiles`
 - `VITE_PM_TILES_BIKE_CARREAU200` si vous ne servez pas `public/tiles/bike_agglo_carreau200.pmtiles`
 - `public/data/corridors/f3_perimetre_arrondi.geojson` et `public/data/corridors/f4_perimetre_arrondi.geojson`, ou les variables `VITE_FAISCEAU_GAILLARD_GEOJSON_URL` et `VITE_FAISCEAU_STJULIEN_GEOJSON_URL`
-- `VITE_CIBLES_GEOJSON_URL` ou `VITE_CIBLES_SHEETS_CSV_URL` si vous ne voulez pas les mocks
-- `VITE_OBSERVATIONS_SHEETS_CSV_URL` et `VITE_COMMENTAIRES_SHEETS_CSV_URL` si vous voulez afficher des retours/commentaires tabulaires sources autres que D1
+- `VITE_CIBLES_GEOJSON_URL` ou `VITE_CIBLES_SHEETS_CSV_URL` si vous voulez afficher des points d'attention
 - `VITE_CONTRIBUTIONS_API_BASE=/api` pour utiliser les Pages Functions incluses
-- un binding D1 `CONTRIBUTIONS_DB` si vous voulez une persistance durable des contributions
-- `VITE_FORCE_LOCAL_MOCKS=true` uniquement si vous voulez forcer les CSV mock locaux, y compris en production
-
-## Contrat local de dev
-
-Donnees lues directement par le front:
-
-- `public/data/google-sheets/cibles-mock.csv`
-- `public/data/google-sheets/remontees-mock.csv`
-- `public/data/google-sheets/commentaires-mock.csv`
-- `public/data/google-sheets/questionnaire-mock.csv`
-
-Stockage d'ecriture local:
-
-- `localStorage` du navigateur
+- un binding D1 `CONTRIBUTIONS_DB` pour la persistance des contributions
 
 ## Prod simple
 
@@ -75,7 +60,7 @@ Stockage d'ecriture local:
 2. Servez les PMTiles et GeoJSON, idealement depuis Cloudflare Pages ou R2.
 3. Activez `VITE_CONTRIBUTIONS_API_BASE=/api` pour utiliser les Pages Functions du dossier `functions/`.
 4. Ajoutez un binding D1 `CONTRIBUTIONS_DB` si vous voulez conserver observations, commentaires et surveys entre les deploiements.
-5. Si les points d'attention, retours ou commentaires sont en ligne, exposez-les en CSV et renseignez les variables `VITE_*_SHEETS_CSV_URL`.
+5. Si les points d'attention sont en ligne, exposez-les en GeoJSON ou CSV et renseignez les variables `VITE_CIBLES_*`.
 
 ## Deploiement Cloudflare Pages
 
@@ -121,4 +106,4 @@ Si D1 est bien branchee, vous devez obtenir `[]` sur un projet vierge, pas une e
 
 Si `wrangler pages deploy` echoue avec un message sur un fichier trop volumineux dans `dist/tiles`, utilisez `npm run deploy:pages` plutot que la commande brute.
 
-Un Google Sheet publie "to web" ne sert qu'en lecture. Les ecritures passent ici par les Pages Functions `/api/*`, qui peuvent rester sur KV ou etre remplacees plus tard par D1, R2 ou un service tiers.
+Un Google Sheet publie "to web" ne sert qu'en lecture. Les ecritures passent ici par les Pages Functions `/api/*`, stockees en D1.

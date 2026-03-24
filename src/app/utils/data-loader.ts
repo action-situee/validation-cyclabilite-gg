@@ -8,25 +8,20 @@
  * ║  1. GeoJSON  – fichier local ou URL distante                    ║
  * ║  2. Google Sheets publié en CSV                                 ║
  * ║                                                                  ║
- * ║  Si aucune source n'est configurée, les données mock locales    ║
- * ║  sont utilisées (fallback transparent).                         ║
+ * ║  Les sources doivent etre explicites : GeoJSON local, URL       ║
+ * ║  distante ou sorties atlas publiees dans public/data/.          ║
  * ╚══════════════════════════════════════════════════════════════════╝
  *
  * ── CONFIGURATION ──
  *
  * Collez vos URLs dans les constantes ci-dessous.
- * Laissez une chaîne vide '' pour utiliser les données mock.
+ * Laissez une chaîne vide '' pour desactiver une source.
  */
 
-import { BikeSegment, Cible, CommentaireGeneral, Faisceau, ObservationLibre } from '../types';
-import { FAISCEAUX as DEFAULT_FAISCEAUX } from '../mock-data/faisceaux';
+import { BikeSegment, Cible, Faisceau } from '../types';
+import { FAISCEAUX as BASE_FAISCEAUX } from '../mock-data/faisceaux';
 
 const env = import.meta.env as Record<string, string | undefined>;
-const IS_PROD = import.meta.env.PROD;
-const DEFAULT_CIBLES_SHEETS_CSV_URL = '/data/google-sheets/cibles-mock.csv';
-const DEFAULT_OBSERVATIONS_SHEETS_CSV_URL = '/data/google-sheets/remontees-mock.csv';
-const DEFAULT_COMMENTAIRES_SHEETS_CSV_URL = '/data/google-sheets/commentaires-mock.csv';
-const FORCE_LOCAL_MOCKS = env.VITE_FORCE_LOCAL_MOCKS === 'true';
 
 // ─────────────────────────────────────────────────
 // SOURCES DE DONNÉES – à configurer ici
@@ -74,25 +69,7 @@ export const CIBLES_GEOJSON_URL = env.VITE_CIBLES_GEOJSON_URL || '';
  * Colonnes facultatives :
  *   sous_titre_affichage, question_cle
  */
-export const CIBLES_SHEETS_CSV_URL = FORCE_LOCAL_MOCKS
-  ? DEFAULT_CIBLES_SHEETS_CSV_URL
-  : env.VITE_CIBLES_SHEETS_CSV_URL || DEFAULT_CIBLES_SHEETS_CSV_URL;
-
-/**
- * URL du CSV local des retours terrain.
- */
-export const OBSERVATIONS_SHEETS_CSV_URL =
-  FORCE_LOCAL_MOCKS
-    ? DEFAULT_OBSERVATIONS_SHEETS_CSV_URL
-    : env.VITE_OBSERVATIONS_SHEETS_CSV_URL || (IS_PROD ? '' : DEFAULT_OBSERVATIONS_SHEETS_CSV_URL);
-
-/**
- * URL du CSV local des commentaires generaux.
- */
-export const COMMENTAIRES_SHEETS_CSV_URL =
-  FORCE_LOCAL_MOCKS
-    ? DEFAULT_COMMENTAIRES_SHEETS_CSV_URL
-    : env.VITE_COMMENTAIRES_SHEETS_CSV_URL || (IS_PROD ? '' : DEFAULT_COMMENTAIRES_SHEETS_CSV_URL);
+export const CIBLES_SHEETS_CSV_URL = env.VITE_CIBLES_SHEETS_CSV_URL || '';
 
 /**
  * URL du GeoJSON segmentaire derive de l'atlas.
@@ -158,82 +135,11 @@ function toOptionalNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function normalizeObservationCategory(value: string) {
-  const normalized = value.trim();
-  if (
-    normalized === 'securite_intersections' ||
-    normalized === 'giratoire' ||
-    normalized === 'maillage_alternative' ||
-    normalized === 'equipement' ||
-    normalized === 'permeabilite_frontiere' ||
-    normalized === 'bande_piste' ||
-    normalized === 'conflits_usage' ||
-    normalized === 'autre'
-  ) {
-    return normalized;
-  }
-
-  if (
-    normalized === 'validation' ||
-    normalized === 'danger' ||
-    normalized === 'amenagement' ||
-    normalized === 'positif'
-  ) {
-    return 'autre';
-  }
-
-  return 'autre';
-}
-
-function normalizeIndiceFeedback(value: string): ObservationLibre['indice_juge'] | undefined {
-  const normalized = value.trim();
-  if (
-    normalized === 'adapte' ||
-    normalized === 'sur_estime' ||
-    normalized === 'sous_estime'
-  ) {
-    return normalized;
-  }
-
-  if (normalized === 'juste') return 'adapte';
-  if (normalized === 'trop_eleve') return 'sur_estime';
-  if (normalized === 'trop_faible') return 'sous_estime';
-
-  return undefined;
-}
-
 function parseListColumn(value: string) {
   return value
     .split(/[|;,]/)
     .map((item) => item.trim())
     .filter(Boolean);
-}
-
-function parseObservationComments(value: string): ObservationLibre['commentaires'] {
-  const normalized = value.trim();
-  if (!normalized) return [];
-
-  try {
-    const parsed = JSON.parse(normalized);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.flatMap((item) => {
-      if (!item || typeof item !== 'object') return [];
-      return [{
-        id: String((item as { id?: unknown }).id || `OBS_COM_${Math.random().toString(36).slice(2, 9)}`),
-        texte: String((item as { texte?: unknown }).texte || ''),
-        auteur: toOptionalString(String((item as { auteur?: unknown }).auteur || '')),
-        date: String((item as { date?: unknown }).date || new Date().toISOString().slice(0, 10)),
-        heure: toOptionalString(String((item as { heure?: unknown }).heure || '')),
-      }];
-    });
-  } catch {
-    return parseListColumn(normalized).map((texte, index) => ({
-      id: `OBS_COM_${index + 1}`,
-      texte,
-      auteur: 'Anonyme',
-      date: new Date().toISOString().slice(0, 10),
-    }));
-  }
 }
 
 
@@ -309,7 +215,7 @@ async function loadFaisceauPolygonFromGeoJSON(url: string): Promise<[number, num
 }
 
 export async function loadFaisceauxFromGeoJSON(): Promise<Faisceau[] | null> {
-  const baseById = new Map(DEFAULT_FAISCEAUX.map((f) => [f.id, f] as const));
+  const baseById = new Map(BASE_FAISCEAUX.map((f) => [f.id, f] as const));
 
   const [gaillardRing, stjulienRing] = await Promise.all([
     loadFaisceauPolygonFromGeoJSON(FAISCEAU_GAILLARD_GEOJSON_URL),
@@ -319,7 +225,7 @@ export async function loadFaisceauxFromGeoJSON(): Promise<Faisceau[] | null> {
   const gaillardBase = baseById.get('thonex_gaillard');
   const stjulienBase = baseById.get('plo_stjulien');
   if (!gaillardBase || !stjulienBase) {
-    console.warn('[data-loader] Faisceaux mock introuvables (ids attendus)');
+    console.warn('[data-loader] Faisceaux de reference introuvables (ids attendus)');
     return null;
   }
 
@@ -429,101 +335,6 @@ export async function loadCiblesFromSheet(): Promise<Cible[] | null> {
   }
 }
 
-export async function loadObservationsFromSheet(): Promise<ObservationLibre[] | null> {
-  if (!OBSERVATIONS_SHEETS_CSV_URL) return null;
-
-  try {
-    const res = await fetch(OBSERVATIONS_SHEETS_CSV_URL);
-    if (!res.ok) {
-      console.warn(`[data-loader] Observations Sheets HTTP ${res.status}`);
-      return null;
-    }
-
-    const text = await res.text();
-    const parsed = parseCSVText(text);
-    if (!parsed) return null;
-
-    const observations: ObservationLibre[] = [];
-    parsed.rows.forEach((row, index) => {
-      const latitude = toOptionalNumber(getCSVColumn(row, parsed.headers, 'latitude'));
-      const longitude = toOptionalNumber(getCSVColumn(row, parsed.headers, 'longitude'));
-      if (latitude === undefined || longitude === undefined) return;
-
-      observations.push({
-        id: getCSVColumn(row, parsed.headers, 'id') || `OBS_MOCK_${index + 1}`,
-        latitude,
-        longitude,
-        commentaire: getCSVColumn(row, parsed.headers, 'commentaire'),
-        categorie: normalizeObservationCategory(
-          getCSVColumn(row, parsed.headers, 'type_retour') || getCSVColumn(row, parsed.headers, 'type'),
-        ),
-        type_autre: toOptionalString(getCSVColumn(row, parsed.headers, 'type_retour_autre')),
-        classes_concernees: parseListColumn(getCSVColumn(row, parsed.headers, 'classes_concernees')) as ObservationLibre['classes_concernees'],
-        auteur: getCSVColumn(row, parsed.headers, 'auteur') || 'Anonyme',
-        organisation: toOptionalString(getCSVColumn(row, parsed.headers, 'organisation')),
-        date: getCSVColumn(row, parsed.headers, 'date') || new Date().toISOString().slice(0, 10),
-        heure: toOptionalString(getCSVColumn(row, parsed.headers, 'heure')),
-        cible_id: toOptionalString(getCSVColumn(row, parsed.headers, 'cible_id')),
-        corridor_id: toOptionalString(getCSVColumn(row, parsed.headers, 'faisceau_id')),
-        segment_id: toOptionalString(getCSVColumn(row, parsed.headers, 'segment_id')),
-        segment_label: toOptionalString(getCSVColumn(row, parsed.headers, 'segment_label')),
-        indice_juge: normalizeIndiceFeedback(getCSVColumn(row, parsed.headers, 'indice_juge')),
-        upvotes: toOptionalNumber(getCSVColumn(row, parsed.headers, 'upvotes')) || 0,
-        downvotes: toOptionalNumber(getCSVColumn(row, parsed.headers, 'downvotes')) || 0,
-        votedBy: [],
-        commentaires: parseObservationComments(getCSVColumn(row, parsed.headers, 'commentaires_json')),
-        photos: parseListColumn(getCSVColumn(row, parsed.headers, 'photos')).length > 0
-          ? parseListColumn(getCSVColumn(row, parsed.headers, 'photos'))
-          : undefined,
-      });
-    });
-
-    console.log(`[data-loader] ${observations.length} observations chargees depuis Google Sheets`);
-    return observations.length > 0 ? observations : null;
-  } catch (err) {
-    console.warn('[data-loader] Erreur chargement observations Sheets :', err);
-    return null;
-  }
-}
-
-export async function loadCommentairesFromSheet(): Promise<CommentaireGeneral[] | null> {
-  if (!COMMENTAIRES_SHEETS_CSV_URL) return null;
-
-  try {
-    const res = await fetch(COMMENTAIRES_SHEETS_CSV_URL);
-    if (!res.ok) {
-      console.warn(`[data-loader] Commentaires Sheets HTTP ${res.status}`);
-      return null;
-    }
-
-    const text = await res.text();
-    const parsed = parseCSVText(text);
-    if (!parsed) return null;
-
-    const commentaires: CommentaireGeneral[] = [];
-    parsed.rows.forEach((row, index) => {
-      const texte = getCSVColumn(row, parsed.headers, 'texte');
-      if (!texte.trim()) return;
-
-      commentaires.push({
-        id: getCSVColumn(row, parsed.headers, 'id') || `COM_MOCK_${index + 1}`,
-        auteur: getCSVColumn(row, parsed.headers, 'auteur') || 'Anonyme',
-        texte,
-        date: getCSVColumn(row, parsed.headers, 'date') || new Date().toISOString().slice(0, 10),
-        heure: toOptionalString(getCSVColumn(row, parsed.headers, 'heure')),
-        faisceau_id: toOptionalString(getCSVColumn(row, parsed.headers, 'faisceau_id')),
-      });
-    });
-
-    console.log(`[data-loader] ${commentaires.length} commentaires charges depuis Google Sheets`);
-    return commentaires.length > 0 ? commentaires : null;
-  } catch (err) {
-    console.warn('[data-loader] Erreur chargement commentaires Sheets :', err);
-    return null;
-  }
-}
-
-
 // ─────────────────────────────────────────────────
 // ORCHESTRATEUR – cascade de sources
 // ─────────────────────────────────────────────────
@@ -532,7 +343,7 @@ export async function loadCommentairesFromSheet(): Promise<CommentaireGeneral[] 
  * Charge les cibles en cascade :
  *   1. GeoJSON (prioritaire)
  *   2. Google Sheets CSV
- *   3. null (→ mock data en fallback dans useAppData)
+ *   3. null
  */
 export async function loadCibles(): Promise<Cible[] | null> {
   const fromGeoJSON = await loadCiblesFromGeoJSON();
@@ -547,7 +358,7 @@ export async function loadCibles(): Promise<Cible[] | null> {
 /**
  * Charge les faisceaux (délimitations) :
  *   1. GeoJSON
- *   2. null (→ mock data en fallback dans useAppData)
+ *   2. null
  */
 export async function loadFaisceaux(): Promise<Faisceau[] | null> {
   return loadFaisceauxFromGeoJSON();
@@ -570,6 +381,7 @@ function lineStringToLatLngs(geometry: any): [number, number][] {
 
   return [];
 }
+
 
 function featureToBikeSegment(feature: any): BikeSegment | null {
   const p = feature.properties || {};

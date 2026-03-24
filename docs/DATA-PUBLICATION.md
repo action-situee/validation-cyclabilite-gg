@@ -78,7 +78,7 @@ Important:
 - le depot fournit deja cette API via `functions/api/*`
 - pour activer cette API, ajoutez un binding D1 `CONTRIBUTIONS_DB`
 - sans binding D1, les endpoints `/api/*` repondent en `503`
-- cette API peut ensuite etre redirigee vers D1, R2, Sheets, Airtable, Notion, Postgres, etc.
+- les observations, commentaires et surveys affiches par l'application proviennent uniquement de D1 via cette API
 
 ## Regenerer les fichiers publics depuis l'atlas
 
@@ -104,6 +104,5 @@ VITE_FAISCEAU_GAILLARD_GEOJSON_URL=/data/corridors/f3_perimetre_arrondi.geojson
 VITE_FAISCEAU_STJULIEN_GEOJSON_URL=/data/corridors/f4_perimetre_arrondi.geojson
 VITE_CIBLES_GEOJSON_URL=
 VITE_CIBLES_SHEETS_CSV_URL=
-VITE_FORCE_LOCAL_MOCKS=false
 VITE_CONTRIBUTIONS_API_BASE=/api
 ```

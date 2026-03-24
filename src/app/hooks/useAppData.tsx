@@ -1,12 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { Cible, Faisceau, ObservationLibre, CommentaireGeneral } from '../types';
-import { FAISCEAUX as MOCK_FAISCEAUX } from '../mock-data/faisceaux';
+import { FAISCEAUX as DEFAULT_FAISCEAUX } from '../mock-data/faisceaux';
 import { getFingerprint, resolveFingerprint } from '../utils/fingerprint';
-import {
-  loadCommentairesFromSheet,
-  loadFaisceaux,
-  loadObservationsFromSheet,
-} from '../utils/data-loader';
+import { loadFaisceaux } from '../utils/data-loader';
 import { contributionsApi } from '../utils/api';
 
 interface AppDataContextType {
@@ -39,7 +35,7 @@ function mergeById<T extends { id: string }>(base: T[], local: T[]) {
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [cibles] = useState<Cible[]>([]);
-  const [faisceaux, setFaisceaux] = useState<Faisceau[]>(MOCK_FAISCEAUX);
+  const [faisceaux, setFaisceaux] = useState<Faisceau[]>(DEFAULT_FAISCEAUX);
   const [observations, setObservations] = useState<ObservationLibre[]>([]);
   const [commentaires, setCommentaires] = useState<CommentaireGeneral[]>([]);
   const [fingerprintReady, setFingerprintReady] = useState(false);
@@ -60,18 +56,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     Promise.all([
-      loadObservationsFromSheet(),
-      loadCommentairesFromSheet(),
       contributionsApi.getObservations(),
       contributionsApi.getCommentaires(),
     ]).then(([
-      remoteObservations,
-      remoteCommentaires,
       apiObservations,
       apiCommentaires,
     ]) => {
-      setObservations(mergeById(remoteObservations || [], apiObservations || []));
-      setCommentaires(mergeById(remoteCommentaires || [], apiCommentaires || []));
+      setObservations(apiObservations || []);
+      setCommentaires(apiCommentaires || []);
     });
   }, []);
 

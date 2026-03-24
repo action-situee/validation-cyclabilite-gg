@@ -10,24 +10,21 @@ Portail collaboratif de validation de l'indice de cyclabilite du Grand Geneve.
 | Indice agrege carreau 200 m | `.pmtiles` vectoriel | `public/tiles/bike_agglo_carreau200.pmtiles` si present | `VITE_PM_TILES_BIKE_CARREAU200` |
 | Couche frontiere `F` | `.pmtiles` vectoriel | URL distante atlas | `VITE_PM_TILES_PERIMETER` |
 | Delimitations des faisceaux | `.geojson` Polygon / MultiPolygon | `public/data/corridors/f3_perimetre_arrondi.geojson` et `public/data/corridors/f4_perimetre_arrondi.geojson` | `VITE_FAISCEAU_GAILLARD_GEOJSON_URL` / `VITE_FAISCEAU_STJULIEN_GEOJSON_URL` |
-| Points d'attention | `.geojson` Point ou CSV | mock local | `VITE_CIBLES_GEOJSON_URL` / `VITE_CIBLES_SHEETS_CSV_URL` |
-| Retours terrain | CSV | mock local en dev uniquement | `VITE_OBSERVATIONS_SHEETS_CSV_URL` |
-| Commentaires generaux | CSV | mock local en dev uniquement | `VITE_COMMENTAIRES_SHEETS_CSV_URL` |
+| Points d'attention | `.geojson` Point ou CSV | aucune | `VITE_CIBLES_GEOJSON_URL` / `VITE_CIBLES_SHEETS_CSV_URL` |
+| Retours terrain | API JSON | D1 via `/api/observations` | `VITE_CONTRIBUTIONS_API_BASE` |
+| Commentaires generaux | API JSON | D1 via `/api/commentaires` | `VITE_CONTRIBUTIONS_API_BASE` |
 | Quantiles de l'indice | `.json` | `public/data/atlas/bike-metric-quantiles.json` | regenere par script |
-| Ecriture distante des contributions | endpoints HTTP JSON optionnels | desactivee en local | `VITE_CONTRIBUTIONS_API_BASE` |
+| Ecriture distante des contributions | endpoints HTTP JSON | D1 via `/api` | `VITE_CONTRIBUTIONS_API_BASE` |
 
 Le portail ne lit pas directement un `.parquet` dans le navigateur. Le brut vit dans `copie-atlas-marchabilite-cyclabilite/` puis passe par le pipeline atlas (`parquet -> ndjson/tiles -> pmtiles + quantiles`).
 
-En developpement, les CSV mock locaux restent le fallback. En production, les remontees et commentaires ne tombent plus sur les mocks par defaut: il faut soit renseigner `VITE_OBSERVATIONS_SHEETS_CSV_URL` et `VITE_COMMENTAIRES_SHEETS_CSV_URL`, soit laisser D1 fournir uniquement les contributions via `/api`. Pour forcer explicitement le mode mock, definir `VITE_FORCE_LOCAL_MOCKS=true`.
+Les contributions chargees par le front proviennent uniquement de D1 via `/api`. Il n'y a plus de fallback CSV ni de mode mock pour les observations, commentaires ou questionnaires.
 
 ## Lecture locale
 
-- `public/data/google-sheets/cibles-mock.csv` : points d'attention
-- `public/data/google-sheets/remontees-mock.csv` : observations sur la carte
-- `public/data/google-sheets/commentaires-mock.csv` : commentaires dans la sidebar
-- `public/data/google-sheets/questionnaire-mock.csv` : donnees de questionnaire
-
-En local, ces fichiers sont lus directement par le front.
+- `public/data/atlas/` : sorties atlas versionnees pour l'indice
+- `public/data/corridors/` : delimitations des faisceaux
+- `public/data/google-sheets/*-template.csv` : templates de structure pour des imports eventuels
 
 ## API Cloudflare
 
@@ -75,7 +72,7 @@ npm run preview
 ## Fichiers importants
 
 - `src/app/utils/data-loader.ts` : lecture directe des corridors, points, retours et commentaires
-- `src/app/utils/api.ts` : contrat HTTP optionnel pour les ecritures distantes
+- `src/app/utils/api.ts` : contrat HTTP des contributions D1 via `/api`
 - `vite.config.ts` : configuration Vite
 - `scripts/prepare-public-data.mjs` : regeneration des sorties atlas publiques
 - `docs/DATA-PUBLICATION.md` : formats attendus
