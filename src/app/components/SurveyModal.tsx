@@ -240,7 +240,7 @@ export function SurveyModal({ open, onClose, onSubmitted }: SurveyModalProps) {
 
             <LikertQuestion
               number={2}
-              title="Que pensez-vous des classes et des attributs qui composent l’indice ?"
+              title="Que pensez-vous des classes qui composent l’indice (cf. panneau à droite) ?"
               options={Q2_OPTIONS}
               value={q2}
               onChange={setQ2}
@@ -249,7 +249,7 @@ export function SurveyModal({ open, onClose, onSubmitted }: SurveyModalProps) {
             <fieldset className="space-y-2.5 pb-4 border-b border-[#ece9e4]">
               <legend className="text-[11px] uppercase tracking-[0.12em] text-[#0a0a0a] pb-1 block w-full">
                 <span className="font-mono text-[#2E6A4A] mr-2">Question 3</span>
-                Avez-vous des suggestions ou des remarques plus générales ?
+                Avez-vous des suggestions ou des remarques générales ?
               </legend>
               <textarea
                 value={q3}

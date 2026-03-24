@@ -1,5 +1,4 @@
 import type { BikeSegment } from '../types';
-import { InfoTip } from './InfoTip';
 import {
   BIKE_CLASS_DEFINITIONS,
   getMetricValueByKey,
@@ -40,9 +39,6 @@ export function HoveredSegmentCard({
       : segment.segment_id
     : null;
   const emptyStateLabel = 'Survolez la carte';
-  const emptyStateHint = isCarreau
-    ? 'Survolez un carreau ou zoomez davantage pour voir un segment detaille. Vous pouvez aussi cliquer sur une classe ci-dessous pour recolorer la carte selon cet indicateur.'
-    : 'Survolez un segment pour lire ses scores. Vous pouvez aussi cliquer sur une classe ci-dessous pour recolorer la carte selon cet indicateur.';
 
   const handleClassClick = (classKey: BikeMetricKey) => {
     onMetricChange(classKey === selectedMetric ? 'bike_index' : classKey);
@@ -57,9 +53,7 @@ export function HoveredSegmentCard({
             <span className="text-[10px] text-[#999] font-mono">
               {identifierLabel}
             </span>
-          ) : (
-            <InfoTip text={emptyStateHint} align="right" />
-          )}
+          ) : null}
         </div>
         <p className="text-[12px] text-[#0a0a0a] leading-relaxed">
           {segment?.faisceau_nom || emptyStateLabel}

@@ -3,7 +3,6 @@ import { Bike } from 'lucide-react';
 import type { BikeSegment } from '../types';
 import { HoveredSegmentCard } from './HoveredSegmentCard';
 import { buildQuantileLegendBins, VALUE_THRESHOLDS, type BikeMetricKey } from '../config/bikeMetrics';
-import { InfoTip } from './InfoTip';
 
 interface SidebarProps {
   className?: string;
@@ -41,16 +40,15 @@ export function Sidebar({
 
       <div className="flex-1 overflow-y-auto bg-[rgba(229,238,230,0.66)]">
         <div className="p-4 border-b-2 border-[#0a0a0a] bg-[rgba(229,238,230,0.66)] space-y-4">
-          <div className="flex items-center justify-between gap-3">
+          <div>
             <div>
               <h2 className="text-[10px] uppercase tracking-[0.15em] text-[#2E6A4A] mb-1">
                 Indice & projection
               </h2>
               <p className="text-[10px] text-[#5c5c5c] leading-relaxed">
-                Lisez l&apos;indice, comparez les classes et contribuez dans le panneau de gauche.
+                L&apos;indice s&apos;affiche sur la carte ! Vous pouvez comparer les classes ci-dessous et contribuer à la carte en ajoutant vos commentaires (cf. Consignes en haut à gauche).
               </p>
             </div>
-            <InfoTip text="Ce panneau de droite sert a lire l'indice affiche sur la carte : profil du segment ou du carreau survole, changement de classe affichee, et lecture de la legende de couleurs." />
           </div>
 
           <HoveredSegmentCard
@@ -62,11 +60,10 @@ export function Sidebar({
         </div>
 
         <div className="p-4 bg-[rgba(229,238,230,0.66)]">
-          <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="mb-3">
             <h3 className="text-[10px] uppercase tracking-[0.15em] text-[#5c5c5c]">
               Legende quantile
             </h3>
-            <InfoTip text="La carte est coloriee avec des seuils quantiles : chaque couleur correspond a une tranche de valeurs relative a l'ensemble du territoire, et non a une echelle lineaire reguliere." />
           </div>
           <div className="grid grid-cols-1 gap-1.5">
             {legendBins.map((bin) => (

@@ -85,7 +85,7 @@ export function AdminDashboard() {
             </a>
             <div>
             <p className="text-[10px] uppercase tracking-[0.18em] text-[#5c5c5c]">Administration</p>
-            <h1 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#1f2b24]">Lecture tabulaire des remontees</h1>
+            <h1 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#1f2b24]">Lecture tabulaire des remontées</h1>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -138,14 +138,14 @@ export function AdminDashboard() {
         <div className="border-2 border-[#0a0a0a] bg-white">
           <div className="border-b-2 border-[#0a0a0a] px-4 py-3">
             <h2 className="text-[12px] uppercase tracking-[0.14em]">
-              {activeTab === 'observations' && 'Observations localisees'}
-              {activeTab === 'commentaires' && 'Commentaires generaux'}
+              {activeTab === 'observations' && 'Observations localisées'}
+              {activeTab === 'commentaires' && 'Commentaires généraux'}
               {activeTab === 'surveys' && 'Questionnaires'}
             </h2>
           </div>
 
           {loading ? (
-            <div className="px-4 py-8 text-[13px] text-[#5c5c5c]">Chargement des donnees...</div>
+            <div className="px-4 py-8 text-[13px] text-[#5c5c5c]">Chargement des données...</div>
           ) : (
             <div className="px-2 py-2 sm:px-4 sm:py-4">
               {activeTab === 'observations' && (

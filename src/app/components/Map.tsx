@@ -955,7 +955,7 @@ function MapInner({
   const selectedFaisceauRef = useRef(selectedFaisceau);
   const ciblesRef = useRef(cibles);
   const observationsRef = useRef(observations);
-  const showLabelsRef = useRef(false);
+  const showLabelsRef = useRef(true);
   const showPerimeterRef = useRef(true);
   const showFaisceauxRef = useRef(Boolean(showFaisceaux));
   const carreauAvailableRef = useRef(Boolean(BIKE_CARREAU200_PM_TILES_URL));
@@ -967,7 +967,7 @@ function MapInner({
   const [displayScale, setDisplayScale] = useState<AnalysisScale>(
     getScaleForZoom(DEFAULT_ZOOM, Boolean(BIKE_CARREAU200_PM_TILES_URL)),
   );
-  const [showLabels, setShowLabels] = useState(false);
+  const [showLabels, setShowLabels] = useState(true);
   const [showPerimeter, setShowPerimeter] = useState(true);
   const [labelsAvailable, setLabelsAvailable] = useState(true);
   const [carreauAvailable, setCarreauAvailable] = useState(Boolean(BIKE_CARREAU200_PM_TILES_URL));

@@ -88,7 +88,7 @@ export function ValidationSidebar({
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-[#D3E4D7] text-sm uppercase tracking-[0.15em]">Contribution</h1>
-            <p className="text-[#8AA894] text-[10px] uppercase tracking-[0.1em]">Remontees & commentaires</p>
+            <p className="text-[#8AA894] text-[10px] uppercase tracking-[0.1em]">Remontées & commentaires</p>
           </div>
           <button
             type="button"
@@ -105,7 +105,7 @@ export function ValidationSidebar({
       <div className="flex-1 overflow-y-auto bg-[rgba(229,238,230,0.66)]">
         <div className={sectionClass}>
           <h3 className={sectionTitleClass}>
-            Etape 1 · Repondre au questionnaire
+            Étape 1 · Répondre au questionnaire
           </h3>
           <p className={`${bodyTextClass} mb-3`}>
             Donnez votre avis global sur l&apos;indice et proposez vos suggestions.
@@ -115,13 +115,13 @@ export function ValidationSidebar({
             className="w-full flex items-center justify-center gap-2 px-2.5 py-2 border border-[#2E6A4A] bg-white text-[#2E6A4A] hover:bg-[#2E6A4A] hover:text-[#D3E4D7] transition-all text-[10px] uppercase tracking-[0.1em]"
           >
             <ClipboardCheck className="w-3.5 h-3.5" />
-            Questionnaire general
+            Questionnaire général
           </button>
         </div>
 
         <div className={sectionClass}>
           <h3 className={sectionTitleClass}>
-            Etape 2 · Choisir un faisceau transfrontalier
+            Étape 2 · Choisir un faisceau transfrontalier
           </h3>
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -158,17 +158,17 @@ export function ValidationSidebar({
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span className="flex-1 text-left">Delimitations des faisceaux</span>
+              <span className="flex-1 text-left">Délimitations des faisceaux</span>
             </button>
           )}
         </div>
 
         <div className={sectionClass}>
           <div className={sectionTitleClass}>
-            Etape 3 · Commentaire géolocalisé
+            Étape 3 · Commentaire géolocalisé
           </div>
           <p className={bodyTextClass}>
-            Ajoutez directement des points sur la carte. Cliquez sur + Ajouter pour creer un point. Appuyez sur un point existant pour lire la discussion, voter ou y ajouter un commentaire.
+            Ajoutez directement des points sur la carte. Cliquez sur + Ajouter pour créer un point. Appuyez sur un point existant pour lire la discussion, voter ou y ajouter un commentaire.
           </p>
         </div>
 
@@ -260,7 +260,7 @@ export function ValidationSidebar({
       <div className="border-t border-[#d5dbd7] bg-white grid grid-cols-2 shrink-0">
         <div className="border-r border-[#d5dbd7] p-3 text-center">
           <div className="text-2xl text-[#2E6A4A] font-mono">{observationsCount}</div>
-          <div className="text-[10px] uppercase tracking-[0.12em] text-[#4d5853]">Points localises</div>
+          <div className="text-[10px] uppercase tracking-[0.12em] text-[#4d5853]">Points localisés</div>
         </div>
         <div className="p-3 text-center">
           <div className="text-2xl text-[#2E6A4A] font-mono">{commentaires.length}</div>

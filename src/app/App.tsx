@@ -171,8 +171,8 @@ function AppInner() {
   const handleSubmitObservation = useCallback((obs: ObservationLibre) => {
     void addObservation(obs).then((savedId) => {
       if (!savedId) {
-        toast.error('Echec de l\'enregistrement', {
-          description: 'La contribution n\'a pas pu etre envoyee a Cloudflare.',
+        toast.error('Échec de l\'enregistrement', {
+          description: 'La contribution n\'a pas pu être envoyée à Cloudflare.',
         });
         return;
       }
@@ -198,8 +198,8 @@ function AppInner() {
   const handleAddCommentaire = useCallback((com: CommentaireGeneral) => {
     void addCommentaire(com).then((savedId) => {
       if (!savedId) {
-        toast.error('Echec de l\'enregistrement', {
-          description: 'Le commentaire n\'a pas pu etre envoye a Cloudflare.',
+        toast.error('Échec de l\'enregistrement', {
+          description: 'Le commentaire n\'a pas pu être envoyé à Cloudflare.',
         });
         return;
       }
@@ -390,13 +390,13 @@ function AppInner() {
 
           <div className="min-w-0 sm:px-4 sm:text-center">
             <h1 className="text-[12px] sm:text-[14px] leading-tight text-[#0a0a0a] uppercase tracking-[0.08em]">
-              Validation de l&apos;indice de cyclabilite
+              Validation de l&apos;indice de cyclabilité
             </h1>
             <p className="hidden sm:block text-[10px] leading-tight text-[#5c5c5c] uppercase tracking-[0.12em]">
               sur deux faisceaux transfrontaliers
             </p>
             <p className="sm:hidden text-[9px] leading-tight text-[#5c5c5c] uppercase tracking-[0.12em]">
-              Grand Geneve
+              Grand Genève
             </p>
           </div>
 
@@ -463,7 +463,7 @@ function AppInner() {
                     Chargement de la carte
                   </p>
                   <p className="text-[11px] text-[#5c5c5c]">
-                    Chargement des tuiles segmentaires du Grand Geneve...
+                    Chargement des tuiles segmentaires du Grand Genève...
                   </p>
                 </div>
               </div>
@@ -584,9 +584,9 @@ function AppInner() {
             <div className="p-6 space-y-5">
               <div className="border-2 border-[#0a0a0a] bg-white p-4 space-y-4" style={{ boxShadow: '4px 4px 0 rgba(0,0,0,0.08)' }}>
                 {[
-                  { n: 'Etape 1', title: 'Remplir le questionnaire general', desc: '' },
-                  { n: 'Etape 2', title: 'Choisir un faisceau de travail', desc: 'Saint-Julien vers Carouge et Gaillard vers les Eaux-vives' },
-                  { n: 'Etape 3', title: 'Ajouter des commentaires localises et voter sur les commentaires des autres personnes', desc: 'Bouton Ajouter une observation en haut a droite de la carte' },
+                  { n: 'Étape 1', title: 'Remplir le questionnaire général', desc: '' },
+                  { n: 'Étape 2', title: 'Choisir un faisceau de travail', desc: 'Saint-Julien vers Carouge et Gaillard vers les Eaux-Vives' },
+                  { n: 'Étape 3', title: 'Ajouter des commentaires localisés et voter sur les commentaires des autres personnes', desc: 'Bouton "Ajouter une observation" en haut à droite de la carte' },
                 ].map(({ n, title, desc }) => (
                   <div key={n} className="space-y-1 border-b border-[#ece9e4] pb-3 last:border-b-0 last:pb-0">
                     <div>
@@ -599,7 +599,7 @@ function AppInner() {
 
                 <div className="pt-1">
                   <p className="text-[11px] text-[#5c5c5c] leading-relaxed">
-                    Vers l'application dediees pour observer l'indice :{' '}
+                    Vers l&apos;application dédiée pour observer l&apos;indice :{' '}
                     <a
                       href="https://active.situee.ch"
                       target="_blank"

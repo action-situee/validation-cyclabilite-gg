@@ -1,6 +1,6 @@
 export type BasemapMode = 'voyager' | 'swissLight' | 'swissImagery' | 'none';
 
-export const DEFAULT_BASEMAP: BasemapMode = 'swissLight';
+export const DEFAULT_BASEMAP: BasemapMode = 'voyager';
 
 export const BASEMAP_OPTIONS = [
   {
