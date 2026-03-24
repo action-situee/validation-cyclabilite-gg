@@ -76,8 +76,8 @@ Important:
 
 - un Google Sheet publie en CSV est seulement lisible
 - le depot fournit deja cette API via `functions/api/*`
-- pour activer cette API, ajoutez un binding KV `CONTRIBUTIONS_KV`
-- sans binding KV, les endpoints `/api/*` repondent en `503`
+- pour activer cette API, ajoutez un binding D1 `CONTRIBUTIONS_DB`
+- sans binding D1, les endpoints `/api/*` repondent en `503`
 - cette API peut ensuite etre redirigee vers D1, R2, Sheets, Airtable, Notion, Postgres, etc.
 
 ## Regenerer les fichiers publics depuis l'atlas

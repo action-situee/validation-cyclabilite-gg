@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useState, useMemo, useCallback, useEffect } from 'react';
 import { Toaster, toast } from 'sonner';
-import { Plus, X, Bike, HelpCircle, ClipboardCheck, PanelLeft, PanelRight, PanelsLeftRight } from 'lucide-react';
+import { Plus, X, Bike, HelpCircle, PanelLeft, PanelRight, PanelsLeftRight } from 'lucide-react';
 import { AppDataProvider, useAppData } from './hooks/useAppData';
 import { Sidebar } from './components/Sidebar';
 import { ValidationSidebar } from './components/ValidationSidebar';
@@ -23,6 +23,9 @@ const ObservationThread = lazy(() =>
 );
 const SurveyModal = lazy(() =>
   import('./components/SurveyModal').then((module) => ({ default: module.SurveyModal })),
+);
+const AdminDashboard = lazy(() =>
+  import('./components/AdminDashboard').then((module) => ({ default: module.AdminDashboard })),
 );
 
 type SidebarMode = 'none' | 'left' | 'right' | 'both';
@@ -49,7 +52,7 @@ function AppInner() {
   const [quantileMap, setQuantileMap] = useState<Partial<Record<BikeMetricKey, number[]>>>({});
 
   // Faisceau visibility (délimitations)
-  const [showFaisceaux, setShowFaisceaux] = useState(false);
+  const [showFaisceaux, setShowFaisceaux] = useState(true);
 
   // Help modal
   const [showHelp, setShowHelp] = useState(false);
@@ -352,6 +355,12 @@ function AppInner() {
             >
               <HelpCircle className="w-5 h-5 text-[#2E6A4A]" />
             </button>
+            <a
+              href="#/admin"
+              className="inline-flex items-center justify-center border-2 border-[#0a0a0a] bg-white px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] hover:bg-[#f3f6f3]"
+            >
+              Admin
+            </a>
           </div>
 
           <div className="min-w-0 sm:px-4 sm:text-center">
@@ -637,6 +646,28 @@ function AppInner() {
 }
 
 export default function App() {
+  const [isAdminRoute, setIsAdminRoute] = useState(
+    typeof window !== 'undefined' && window.location.hash === '#/admin',
+  );
+
+  useEffect(() => {
+    const syncRoute = () => {
+      setIsAdminRoute(window.location.hash === '#/admin');
+    };
+
+    syncRoute();
+    window.addEventListener('hashchange', syncRoute);
+    return () => window.removeEventListener('hashchange', syncRoute);
+  }, []);
+
+  if (isAdminRoute) {
+    return (
+      <Suspense fallback={null}>
+        <AdminDashboard />
+      </Suspense>
+    );
+  }
+
   return (
     <AppDataProvider>
       <AppInner />

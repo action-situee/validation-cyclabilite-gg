@@ -45,14 +45,14 @@ Le depot inclut maintenant des endpoints Cloudflare Pages Functions:
 
 En production Cloudflare, le front cible `/api` via `VITE_CONTRIBUTIONS_API_BASE=/api`.
 
-Pour une persistance durable, ajoutez un binding KV `CONTRIBUTIONS_KV` dans `wrangler.toml`. Sans binding, les fonctions `/api` repondent en `503` et aucune contribution n'est stockee cote Cloudflare.
+Pour une persistance durable, ajoutez un binding D1 `CONTRIBUTIONS_DB` dans Cloudflare Pages. Sans binding, les fonctions `/api` repondent en `503` et aucune contribution n'est stockee cote Cloudflare.
 
 Commandes Cloudflare minimales:
 
 ```bash
 npx wrangler login
-npx wrangler kv namespace create contributions-kv
-npx wrangler kv namespace create contributions-kv --preview
+npx wrangler d1 create validation-cyclabilite-gg
+npx wrangler d1 migrations apply validation-cyclabilite-gg
 npx wrangler pages project create validation-cyclabilite-gg --production-branch main
 npm run deploy:pages
 ```

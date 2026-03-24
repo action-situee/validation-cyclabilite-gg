@@ -15,9 +15,9 @@ VITE_MAP_STYLE_VOYAGER = "https://basemaps.cartocdn.com/gl/voyager-gl-style/styl
 VITE_MAP_STYLE_SWISS_LIGHT = "https://vectortiles.geo.admin.ch/styles/ch.swisstopo.lightbasemap.vt/style.json"
 VITE_MAP_STYLE_SWISS_IMAGERY = "https://vectortiles.geo.admin.ch/styles/ch.swisstopo.imagerybasemap.vt/style.json"
 
-# Configure with real IDs before deploying persistent contribution storage.
-# Without this binding, the Pages Functions return HTTP 503 on /api.
-[[kv_namespaces]]
-binding = "CONTRIBUTIONS_KV"
-id = "9cd036c761d14a60afa3dc47bade0254"
-preview_id = "c05b2fb1304a4309b31c1c0b8afdb5c3"
+# The application now stores contributions in D1.
+[[d1_databases]]
+binding = "CONTRIBUTIONS_DB"
+database_name = "validation-cyclabilite-gg"
+database_id = "1e261f7b-a59c-41a5-bdd9-42ebad4ae417"
+migrations_dir = "migrations"

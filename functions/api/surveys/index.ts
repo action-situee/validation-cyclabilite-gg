@@ -1,15 +1,13 @@
 import { badRequest, handleOptions, jsonResponse, methodNotAllowed, readJsonBody, serviceUnavailable } from '../_shared/http';
-import { createId, hasContributionsKv, loadCollection, saveCollection, upsertById } from '../_shared/store';
+import { createId, hasContributionsDb, listSurveys, saveSurvey } from '../_shared/d1';
 import type { SurveyRecord } from '../_shared/types';
 
 type Env = {
-  CONTRIBUTIONS_KV?: {
-    get(key: string, type: 'json'): Promise<unknown | null>;
-    put(key: string, value: string): Promise<void>;
+  CONTRIBUTIONS_DB?: {
+    prepare(query: string): unknown;
+    batch(statements: unknown[]): Promise<unknown[]>;
   };
 };
-
-const STORAGE_KEY = 'surveys';
 
 function normalizeSurvey(payload: Partial<SurveyRecord> | null): SurveyRecord | null {
   if (!payload) return null;
@@ -33,16 +31,16 @@ function normalizeSurvey(payload: Partial<SurveyRecord> | null): SurveyRecord | 
 export const onRequestOptions = () => handleOptions();
 
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
-  if (!hasContributionsKv(env)) {
-    return serviceUnavailable('Binding Cloudflare KV CONTRIBUTIONS_KV manquant');
+  if (!hasContributionsDb(env)) {
+    return serviceUnavailable('Binding Cloudflare D1 CONTRIBUTIONS_DB manquant');
   }
-  const items = await loadCollection<SurveyRecord>(env, STORAGE_KEY);
+  const items = await listSurveys(env);
   return jsonResponse(items);
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  if (!hasContributionsKv(env)) {
-    return serviceUnavailable('Binding Cloudflare KV CONTRIBUTIONS_KV manquant');
+  if (!hasContributionsDb(env)) {
+    return serviceUnavailable('Binding Cloudflare D1 CONTRIBUTIONS_DB manquant');
   }
   const payload = await readJsonBody<Partial<SurveyRecord>>(request);
   const survey = normalizeSurvey(payload);
@@ -50,9 +48,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return badRequest('Questionnaire invalide');
   }
 
-  const items = await loadCollection<SurveyRecord>(env, STORAGE_KEY);
-  const next = upsertById(items, survey, String(survey.id));
-  await saveCollection(env, STORAGE_KEY, next);
+  await saveSurvey(env, survey);
   return jsonResponse(survey, 201);
 };
 

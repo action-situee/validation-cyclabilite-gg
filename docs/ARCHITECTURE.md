@@ -37,4 +37,4 @@ Le depot a 4 zones utiles:
 
 En local, sans `VITE_CONTRIBUTIONS_API_BASE`, ces ecritures restent locales au navigateur via `localStorage`. En prod, il faut fournir une API via `VITE_CONTRIBUTIONS_API_BASE`.
 
-Le depot contient maintenant cette API dans `functions/api/` pour Cloudflare Pages. Avec un binding `CONTRIBUTIONS_KV`, elle devient persistante; sans binding, elle repond en `503` pour signaler une configuration Cloudflare incomplete.
+Le depot contient maintenant cette API dans `functions/api/` pour Cloudflare Pages. Avec un binding D1 `CONTRIBUTIONS_DB`, elle devient persistante et lisible de facon tabulaire; sans binding, elle repond en `503` pour signaler une configuration Cloudflare incomplete.

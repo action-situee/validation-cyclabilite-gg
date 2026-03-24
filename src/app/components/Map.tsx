@@ -2012,7 +2012,7 @@ function MapInner({
             d={overlayMask.maskPath}
             fill="#111111"
             fillRule="evenodd"
-            opacity={selectedFaisceau ? 0.22 : 0.14}
+            opacity={selectedFaisceau ? 0.44 : 0.3}
           />
           {overlayMask.faisceaux.map((item) => (
             <path
@@ -2020,9 +2020,9 @@ function MapInner({
               d={item.path}
               fill="none"
               stroke={item.selected ? item.color : '#4b5563'}
-              strokeWidth={item.selected ? 3.4 : 2.2}
+              strokeWidth={item.selected ? 3.6 : 2.4}
               strokeDasharray={item.selected ? undefined : '8 6'}
-              opacity={item.selected || !selectedFaisceau ? 0.92 : 0.55}
+              opacity={item.selected || !selectedFaisceau ? 0.96 : 0.66}
             />
           ))}
         </svg>

@@ -1,15 +1,13 @@
 import { badRequest, handleOptions, jsonResponse, methodNotAllowed, notFound, readJsonBody, serviceUnavailable } from '../_shared/http';
-import { hasContributionsKv, loadCollection, removeById, saveCollection, upsertById } from '../_shared/store';
+import { deleteCommentaireById, getCommentaireById, hasContributionsDb, saveCommentaire } from '../_shared/d1';
 import type { CommentaireRecord } from '../_shared/types';
 
 type Env = {
-  CONTRIBUTIONS_KV?: {
-    get(key: string, type: 'json'): Promise<unknown | null>;
-    put(key: string, value: string): Promise<void>;
+  CONTRIBUTIONS_DB?: {
+    prepare(query: string): unknown;
+    batch(statements: unknown[]): Promise<unknown[]>;
   };
 };
-
-const STORAGE_KEY = 'commentaires';
 
 function normalizeCommentaire(id: string, payload: Partial<CommentaireRecord> | null): CommentaireRecord | null {
   if (!payload) return null;
@@ -29,8 +27,8 @@ function normalizeCommentaire(id: string, payload: Partial<CommentaireRecord> | 
 export const onRequestOptions = () => handleOptions();
 
 export const onRequestPut: PagesFunction<Env> = async ({ params, request, env }) => {
-  if (!hasContributionsKv(env)) {
-    return serviceUnavailable('Binding Cloudflare KV CONTRIBUTIONS_KV manquant');
+  if (!hasContributionsDb(env)) {
+    return serviceUnavailable('Binding Cloudflare D1 CONTRIBUTIONS_DB manquant');
   }
 
   const id = String(params.id || '').trim();
@@ -42,24 +40,21 @@ export const onRequestPut: PagesFunction<Env> = async ({ params, request, env })
     return badRequest('Commentaire invalide');
   }
 
-  const items = await loadCollection<CommentaireRecord>(env, STORAGE_KEY);
-  const next = upsertById(items, commentaire, id);
-  await saveCollection(env, STORAGE_KEY, next);
+  await saveCommentaire(env, commentaire);
   return jsonResponse(commentaire);
 };
 
 export const onRequestDelete: PagesFunction<Env> = async ({ params, env }) => {
-  if (!hasContributionsKv(env)) {
-    return serviceUnavailable('Binding Cloudflare KV CONTRIBUTIONS_KV manquant');
+  if (!hasContributionsDb(env)) {
+    return serviceUnavailable('Binding Cloudflare D1 CONTRIBUTIONS_DB manquant');
   }
   const id = String(params.id || '').trim();
   if (!id) return badRequest('Identifiant manquant');
 
-  const items = await loadCollection<CommentaireRecord>(env, STORAGE_KEY);
-  const exists = items.some((item) => item.id === id);
+  const exists = await getCommentaireById(env, id);
   if (!exists) return notFound('Commentaire introuvable');
 
-  await saveCollection(env, STORAGE_KEY, removeById(items, id));
+  await deleteCommentaireById(env, id);
   return jsonResponse({ ok: true });
 };
 

@@ -15,7 +15,7 @@ npm run build
 npm run preview
 ```
 
-## Creation de la KV Cloudflare
+## Creation de la base D1 Cloudflare
 
 Authentification Cloudflare:
 
@@ -23,25 +23,26 @@ Authentification Cloudflare:
 npx wrangler login
 ```
 
-Creation du namespace KV de production:
+Creation de la base D1:
 
 ```bash
-npx wrangler kv namespace create contributions-kv
+npx wrangler d1 create validation-cyclabilite-gg
 ```
 
-Creation du namespace KV de preview:
+Application du schema SQL:
 
 ```bash
-npx wrangler kv namespace create contributions-kv --preview
+npx wrangler d1 migrations apply validation-cyclabilite-gg
 ```
 
-Copiez ensuite les deux IDs retournes dans `wrangler.toml` avec ce bloc final:
+Ajoutez ensuite le binding D1 dans Cloudflare Pages ou dans `wrangler.toml` avec ce bloc:
 
 ```toml
-[[kv_namespaces]]
-binding = "CONTRIBUTIONS_KV"
-id = "<PRODUCTION_KV_NAMESPACE_ID>"
-preview_id = "<PREVIEW_KV_NAMESPACE_ID>"
+[[d1_databases]]
+binding = "CONTRIBUTIONS_DB"
+database_name = "validation-cyclabilite-gg"
+database_id = "<D1_DATABASE_ID>"
+migrations_dir = "migrations"
 ```
 
 ## Ce qui doit exister
@@ -52,7 +53,7 @@ preview_id = "<PREVIEW_KV_NAMESPACE_ID>"
 - `VITE_CIBLES_GEOJSON_URL` ou `VITE_CIBLES_SHEETS_CSV_URL` si vous ne voulez pas les mocks
 - `VITE_OBSERVATIONS_SHEETS_CSV_URL` et `VITE_COMMENTAIRES_SHEETS_CSV_URL` si vous remplacez les CSV mock locaux
 - `VITE_CONTRIBUTIONS_API_BASE=/api` pour utiliser les Pages Functions incluses
-- un binding KV `CONTRIBUTIONS_KV` si vous voulez une persistance durable des contributions
+- un binding D1 `CONTRIBUTIONS_DB` si vous voulez une persistance durable des contributions
 - `VITE_FORCE_LOCAL_MOCKS=true` uniquement si vous voulez desactiver toutes les sources distantes CSV cote front
 
 ## Contrat local de dev
@@ -73,7 +74,7 @@ Stockage d'ecriture local:
 1. Deployez `dist/` sur un hebergement statique.
 2. Servez les PMTiles et GeoJSON, idealement depuis Cloudflare Pages ou R2.
 3. Activez `VITE_CONTRIBUTIONS_API_BASE=/api` pour utiliser les Pages Functions du dossier `functions/`.
-4. Ajoutez un binding KV `CONTRIBUTIONS_KV` si vous voulez conserver observations, commentaires et surveys entre les deploiements.
+4. Ajoutez un binding D1 `CONTRIBUTIONS_DB` si vous voulez conserver observations, commentaires et surveys entre les deploiements.
 5. Si les points d'attention, retours ou commentaires sont en ligne, exposez-les en CSV et renseignez les variables `VITE_*_SHEETS_CSV_URL`.
 
 ## Deploiement Cloudflare Pages
@@ -104,7 +105,7 @@ Si vous preferez creer le projet dans l'interface Cloudflare:
 4. Configurez la commande de build `npm run build`.
 5. Configurez le dossier de sortie `dist`.
 6. Ajoutez les variables d'environnement presentes dans `wrangler.toml` si vous pilotez la config depuis l'UI.
-7. Ajoutez le binding KV `CONTRIBUTIONS_KV` dans Settings > Functions > KV namespace bindings.
+7. Ajoutez le binding D1 `CONTRIBUTIONS_DB` dans Settings > Functions > D1 bindings.
 
 ## Verification post-deploiement
 
@@ -116,7 +117,7 @@ curl https://<votre-domaine-pages>/api/commentaires
 curl https://<votre-domaine-pages>/api/surveys
 ```
 
-Si la KV est bien branchee, vous devez obtenir `[]` sur un projet vierge, pas une erreur `503`.
+Si D1 est bien branchee, vous devez obtenir `[]` sur un projet vierge, pas une erreur `503`.
 
 Si `wrangler pages deploy` echoue avec un message sur un fichier trop volumineux dans `dist/tiles`, utilisez `npm run deploy:pages` plutot que la commande brute.
 
