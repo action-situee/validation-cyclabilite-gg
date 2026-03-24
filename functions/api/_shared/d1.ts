@@ -176,7 +176,7 @@ function upsertObservationStatement(db: D1DatabaseLike, observation: Observation
       auteur, organisation, role, date, heure, cible_id, faisceau_id, segment_id,
       segment_label, segment_score_calcule, indice_juge, upvotes, downvotes,
       voted_by_json, photos_json, owner_fingerprint, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       latitude = excluded.latitude,
       longitude = excluded.longitude,
