@@ -15,13 +15,45 @@ npm run build
 npm run preview
 ```
 
+## Creation de la KV Cloudflare
+
+Authentification Cloudflare:
+
+```bash
+npx wrangler login
+```
+
+Creation du namespace KV de production:
+
+```bash
+npx wrangler kv namespace create contributions-kv
+```
+
+Creation du namespace KV de preview:
+
+```bash
+npx wrangler kv namespace create contributions-kv --preview
+```
+
+Copiez ensuite les deux IDs retournes dans `wrangler.toml` avec ce bloc final:
+
+```toml
+[[kv_namespaces]]
+binding = "CONTRIBUTIONS_KV"
+id = "<PRODUCTION_KV_NAMESPACE_ID>"
+preview_id = "<PREVIEW_KV_NAMESPACE_ID>"
+```
+
 ## Ce qui doit exister
 
 - `VITE_PM_TILES_BIKE_SEGMENT` si vous ne servez pas `public/tiles/bike_agglo_segment.pmtiles`
-- `public/data/corridors.geojson` ou `VITE_CORRIDORS_GEOJSON_URL`
+- `VITE_PM_TILES_BIKE_CARREAU200` si vous ne servez pas `public/tiles/bike_agglo_carreau200.pmtiles`
+- `public/data/corridors/f3_perimetre_arrondi.geojson` et `public/data/corridors/f4_perimetre_arrondi.geojson`, ou les variables `VITE_FAISCEAU_GAILLARD_GEOJSON_URL` et `VITE_FAISCEAU_STJULIEN_GEOJSON_URL`
 - `VITE_CIBLES_GEOJSON_URL` ou `VITE_CIBLES_SHEETS_CSV_URL` si vous ne voulez pas les mocks
 - `VITE_OBSERVATIONS_SHEETS_CSV_URL` et `VITE_COMMENTAIRES_SHEETS_CSV_URL` si vous remplacez les CSV mock locaux
-- `VITE_CONTRIBUTIONS_API_BASE` seulement quand une API distante existe
+- `VITE_CONTRIBUTIONS_API_BASE=/api` pour utiliser les Pages Functions incluses
+- un binding KV `CONTRIBUTIONS_KV` si vous voulez une persistance durable des contributions
+- `VITE_FORCE_LOCAL_MOCKS=true` uniquement si vous voulez desactiver toutes les sources distantes CSV cote front
 
 ## Contrat local de dev
 
@@ -39,8 +71,53 @@ Stockage d'ecriture local:
 ## Prod simple
 
 1. Deployez `dist/` sur un hebergement statique.
-2. Servez les PMTiles et GeoJSON.
-3. Pointez `VITE_CONTRIBUTIONS_API_BASE` vers votre backend serverless.
-4. Si les points d'attention, retours ou commentaires sont en ligne, exposez-les en CSV et renseignez les variables `VITE_*_SHEETS_CSV_URL`.
+2. Servez les PMTiles et GeoJSON, idealement depuis Cloudflare Pages ou R2.
+3. Activez `VITE_CONTRIBUTIONS_API_BASE=/api` pour utiliser les Pages Functions du dossier `functions/`.
+4. Ajoutez un binding KV `CONTRIBUTIONS_KV` si vous voulez conserver observations, commentaires et surveys entre les deploiements.
+5. Si les points d'attention, retours ou commentaires sont en ligne, exposez-les en CSV et renseignez les variables `VITE_*_SHEETS_CSV_URL`.
 
-Un Google Sheet publie "to web" ne sert qu'en lecture. Pour ecrire les retours utilisateurs, il faut une API intermediaire (Apps Script, Cloudflare Worker, Netlify Function, etc.).
+## Deploiement Cloudflare Pages
+
+Creation du projet Pages depuis le CLI:
+
+```bash
+npx wrangler pages project create validation-cyclabilite-gg --production-branch main
+```
+
+Premier deploiement depuis le repo local:
+
+```bash
+npm run deploy:pages
+```
+
+Cette commande:
+
+- regenere `dist/`
+- supprime les `.pmtiles` locaux de `dist/tiles/` pour eviter la limite Pages de 25 MiB par fichier
+- deploye ensuite `dist` sur le projet Pages existant
+
+Si vous preferez creer le projet dans l'interface Cloudflare:
+
+1. Ouvrez Workers & Pages.
+2. Creez un projet Pages.
+3. Connectez le repo GitHub.
+4. Configurez la commande de build `npm run build`.
+5. Configurez le dossier de sortie `dist`.
+6. Ajoutez les variables d'environnement presentes dans `wrangler.toml` si vous pilotez la config depuis l'UI.
+7. Ajoutez le binding KV `CONTRIBUTIONS_KV` dans Settings > Functions > KV namespace bindings.
+
+## Verification post-deploiement
+
+Controlez ces URLs:
+
+```bash
+curl https://<votre-domaine-pages>/api/observations
+curl https://<votre-domaine-pages>/api/commentaires
+curl https://<votre-domaine-pages>/api/surveys
+```
+
+Si la KV est bien branchee, vous devez obtenir `[]` sur un projet vierge, pas une erreur `503`.
+
+Si `wrangler pages deploy` echoue avec un message sur un fichier trop volumineux dans `dist/tiles`, utilisez `npm run deploy:pages` plutot que la commande brute.
+
+Un Google Sheet publie "to web" ne sert qu'en lecture. Les ecritures passent ici par les Pages Functions `/api/*`, qui peuvent rester sur KV ou etre remplacees plus tard par D1, R2 ou un service tiers.

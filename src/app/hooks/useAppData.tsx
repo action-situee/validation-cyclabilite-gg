@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { Cible, Faisceau, ObservationLibre, CommentaireGeneral } from '../types';
 import { FAISCEAUX as MOCK_FAISCEAUX } from '../mock-data/faisceaux';
-import { storageService } from '../utils/storage';
-import { resolveFingerprint } from '../utils/fingerprint';
+import { getFingerprint, resolveFingerprint } from '../utils/fingerprint';
 import {
   loadCommentairesFromSheet,
   loadFaisceaux,
@@ -15,13 +14,13 @@ interface AppDataContextType {
   faisceaux: Faisceau[];
   observations: ObservationLibre[];
   commentaires: CommentaireGeneral[];
-  addObservation: (obs: ObservationLibre) => string;
-  addObservationComment: (observationId: string, texte: string) => void;
-  deleteObservation: (id: string) => void;
-  voteObservation: (id: string, direction: 'up' | 'down', voterId: string) => void;
-  addCommentaire: (com: CommentaireGeneral) => string;
-  updateCommentaire: (com: CommentaireGeneral) => void;
-  deleteCommentaire: (id: string) => void;
+  addObservation: (obs: ObservationLibre) => Promise<string>;
+  addObservationComment: (observationId: string, texte: string) => Promise<void>;
+  deleteObservation: (id: string) => Promise<void>;
+  voteObservation: (id: string, direction: 'up' | 'down', voterId: string) => Promise<void>;
+  addCommentaire: (com: CommentaireGeneral) => Promise<string>;
+  updateCommentaire: (com: CommentaireGeneral) => Promise<void>;
+  deleteCommentaire: (id: string) => Promise<void>;
   getObservationsForCible: (cibleId: string) => ObservationLibre[];
   isOwnObservation: (id: string) => boolean;
   isOwnCommentaire: (id: string) => boolean;
@@ -60,86 +59,123 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    Promise.all([loadObservationsFromSheet(), loadCommentairesFromSheet()]).then(([remoteObservations, remoteCommentaires]) => {
-      setObservations(
-        mergeById(remoteObservations || [], storageService.getAllObservations()),
-      );
-      setCommentaires(
-        mergeById(remoteCommentaires || [], storageService.getAllCommentaires()),
-      );
+    Promise.all([
+      loadObservationsFromSheet(),
+      loadCommentairesFromSheet(),
+      contributionsApi.getObservations(),
+      contributionsApi.getCommentaires(),
+    ]).then(([
+      remoteObservations,
+      remoteCommentaires,
+      apiObservations,
+      apiCommentaires,
+    ]) => {
+      setObservations(mergeById(remoteObservations || [], apiObservations || []));
+      setCommentaires(mergeById(remoteCommentaires || [], apiCommentaires || []));
     });
   }, []);
 
-  const addObservation = useCallback((obs: ObservationLibre): string => {
-    const saved = storageService.saveObservation(obs);
-    setObservations((prev) => [...prev, saved]);
-    void contributionsApi.createObservation(saved);
-    return saved.id;
-  }, []);
-
-  const addObservationComment = useCallback((observationId: string, texte: string) => {
+  const addObservation = useCallback(async (obs: ObservationLibre): Promise<string> => {
     const now = new Date();
-    setObservations((prev) => prev.map((observation) => {
-      if (observation.id !== observationId) return observation;
+    const payload: ObservationLibre = {
+      ...obs,
+      id: obs.id || `OBS_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      date: obs.date || now.toISOString().slice(0, 10),
+      heure: obs.heure || now.toTimeString().slice(0, 8),
+      upvotes: obs.upvotes ?? 0,
+      downvotes: obs.downvotes ?? 0,
+      votedBy: obs.votedBy ?? [],
+      commentaires: obs.commentaires ?? [],
+      owner_fingerprint: obs.owner_fingerprint || getFingerprint(),
+    };
 
-      const updated: ObservationLibre = {
-        ...observation,
-        commentaires: [
-          ...(observation.commentaires || []),
-          {
-            id: `OBS_COM_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-            texte,
-            auteur: 'Anonyme',
-            date: now.toISOString().slice(0, 10),
-            heure: now.toTimeString().slice(0, 8),
-          },
-        ],
-      };
+    const saved = await contributionsApi.createObservation(payload);
+    if (!saved) return '';
 
-      storageService.updateObservation(updated);
-      void contributionsApi.updateObservation(updated);
-      return updated;
-    }));
-  }, []);
-
-  const deleteObservation = useCallback((id: string) => {
-    storageService.deleteObservation(id);
-    setObservations((prev) => prev.filter((o) => o.id !== id));
-    void contributionsApi.deleteObservation(id);
-  }, []);
-
-  const voteObservation = useCallback((id: string, direction: 'up' | 'down', voterId: string) => {
-    setObservations((prev) => {
-      const obs = prev.find((o) => o.id === id);
-      if (!obs || obs.votedBy.includes(voterId)) return prev;
-      const updated: ObservationLibre = {
-        ...obs,
-        upvotes: direction === 'up' ? obs.upvotes + 1 : obs.upvotes,
-        downvotes: direction === 'down' ? obs.downvotes + 1 : obs.downvotes,
-        votedBy: [...obs.votedBy, voterId],
-      };
-      storageService.updateObservation(updated);
-      void contributionsApi.updateObservation(updated);
-      return prev.map((o) => (o.id === id ? updated : o));
-    });
-  }, []);
-
-  const addCommentaire = useCallback((com: CommentaireGeneral): string => {
-    const saved = storageService.saveCommentaire(com);
-    setCommentaires((prev) => [...prev, saved]);
-    void contributionsApi.createCommentaire(saved);
+    setObservations((prev) => mergeById(prev, [saved]));
     return saved.id;
   }, []);
 
-  const updateCommentaire = useCallback((com: CommentaireGeneral) => {
-    storageService.updateCommentaire(com);
-    setCommentaires((prev) => prev.map((item) => (item.id === com.id ? com : item)));
+  const addObservationComment = useCallback(async (observationId: string, texte: string) => {
+    const now = new Date();
+    const observation = observations.find((item) => item.id === observationId);
+    if (!observation) return;
+
+    const updated: ObservationLibre = {
+      ...observation,
+      commentaires: [
+        ...(observation.commentaires || []),
+        {
+          id: `OBS_COM_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          texte,
+          auteur: 'Anonyme',
+          date: now.toISOString().slice(0, 10),
+          heure: now.toTimeString().slice(0, 8),
+          owner_fingerprint: getFingerprint(),
+        },
+      ],
+    };
+
+    const saved = await contributionsApi.updateObservation(updated);
+    if (!saved) return;
+
+    setObservations((prev) => prev.map((item) => (item.id === saved.id ? saved : item)));
+  }, [observations]);
+
+  const deleteObservation = useCallback(async (id: string) => {
+    const deleted = await contributionsApi.deleteObservation(id);
+    if (!deleted) return;
+
+    setObservations((prev) => prev.filter((o) => o.id !== id));
   }, []);
 
-  const deleteCommentaire = useCallback((id: string) => {
-    storageService.deleteCommentaire(id);
+  const voteObservation = useCallback(async (id: string, direction: 'up' | 'down', voterId: string) => {
+    const observation = observations.find((item) => item.id === id);
+    if (!observation || observation.votedBy.includes(voterId)) return;
+
+    const updated: ObservationLibre = {
+      ...observation,
+      upvotes: direction === 'up' ? observation.upvotes + 1 : observation.upvotes,
+      downvotes: direction === 'down' ? observation.downvotes + 1 : observation.downvotes,
+      votedBy: [...observation.votedBy, voterId],
+    };
+
+    const saved = await contributionsApi.updateObservation(updated);
+    if (!saved) return;
+
+    setObservations((prev) => prev.map((item) => (item.id === saved.id ? saved : item)));
+  }, [observations]);
+
+  const addCommentaire = useCallback(async (com: CommentaireGeneral): Promise<string> => {
+    const now = new Date();
+    const payload: CommentaireGeneral = {
+      ...com,
+      id: com.id || `COM_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      auteur: com.auteur || 'Anonyme',
+      date: com.date || now.toISOString().slice(0, 10),
+      heure: com.heure || now.toTimeString().slice(0, 8),
+      owner_fingerprint: com.owner_fingerprint || getFingerprint(),
+    };
+
+    const saved = await contributionsApi.createCommentaire(payload);
+    if (!saved) return '';
+
+    setCommentaires((prev) => mergeById(prev, [saved]));
+    return saved.id;
+  }, []);
+
+  const updateCommentaire = useCallback(async (com: CommentaireGeneral) => {
+    const saved = await contributionsApi.updateCommentaire(com);
+    if (!saved) return;
+
+    setCommentaires((prev) => prev.map((item) => (item.id === saved.id ? saved : item)));
+  }, []);
+
+  const deleteCommentaire = useCallback(async (id: string) => {
+    const deleted = await contributionsApi.deleteCommentaire(id);
+    if (!deleted) return;
+
     setCommentaires((prev) => prev.filter((c) => c.id !== id));
-    void contributionsApi.deleteCommentaire(id);
   }, []);
 
   const getObservationsForCible = useCallback((cibleId: string) => {
@@ -147,12 +183,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, [observations]);
 
   const isOwnObservation = useCallback((id: string) => {
-    return storageService.isOwnObservation(id);
-  }, [fingerprintReady]);
+    const fingerprint = getFingerprint();
+    return observations.some((item) => item.id === id && item.owner_fingerprint === fingerprint);
+  }, [observations, fingerprintReady]);
 
   const isOwnCommentaire = useCallback((id: string) => {
-    return storageService.isOwnCommentaire(id);
-  }, [fingerprintReady]);
+    const fingerprint = getFingerprint();
+    return commentaires.some((item) => item.id === id && item.owner_fingerprint === fingerprint);
+  }, [commentaires, fingerprintReady]);
 
   /** Map cible_id → faisceau_id for O(1) lookups in filters */
   const cibleFaisceauMap = useMemo(() => {
@@ -197,13 +235,13 @@ export function useAppData() {
       faisceaux: [] as Faisceau[],
       observations: [] as ObservationLibre[],
       commentaires: [] as CommentaireGeneral[],
-      addObservation: (() => '') as (obs: ObservationLibre) => string,
-      addObservationComment: (() => {}) as (observationId: string, texte: string) => void,
-      deleteObservation: (() => {}) as (id: string) => void,
-      voteObservation: (() => {}) as (id: string, direction: 'up' | 'down', voterId: string) => void,
-      addCommentaire: (() => '') as (com: CommentaireGeneral) => string,
-      updateCommentaire: (() => {}) as (com: CommentaireGeneral) => void,
-      deleteCommentaire: (() => {}) as (id: string) => void,
+      addObservation: (async () => '') as (obs: ObservationLibre) => Promise<string>,
+      addObservationComment: (async () => {}) as (observationId: string, texte: string) => Promise<void>,
+      deleteObservation: (async () => {}) as (id: string) => Promise<void>,
+      voteObservation: (async () => {}) as (id: string, direction: 'up' | 'down', voterId: string) => Promise<void>,
+      addCommentaire: (async () => '') as (com: CommentaireGeneral) => Promise<string>,
+      updateCommentaire: (async () => {}) as (com: CommentaireGeneral) => Promise<void>,
+      deleteCommentaire: (async () => {}) as (id: string) => Promise<void>,
       getObservationsForCible: (() => []) as (cibleId: string) => ObservationLibre[],
       isOwnObservation: (() => false) as (id: string) => boolean,
       isOwnCommentaire: (() => false) as (id: string) => boolean,

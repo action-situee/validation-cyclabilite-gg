@@ -7,24 +7,28 @@
 Le front attend une tuile vectorielle PMTiles, pas un parquet brut:
 
 - `VITE_PM_TILES_BIKE_SEGMENT`
+- `VITE_PM_TILES_BIKE_CARREAU200`
 - `VITE_BIKE_SOURCE_LAYER`
 
 Le brut reste dans l'atlas `copie-atlas-marchabilite-cyclabilite/` puis passe par le pipeline atlas. Pour le portail, il faut publier:
 
 - `bike_agglo_segment.pmtiles`
+- `bike_agglo_carreau200.pmtiles`
 - `bike-metric-quantiles.json`
 
-### 2. Corridors
+### 2. Faisceaux
 
 Format: GeoJSON `Polygon` ou `MultiPolygon`.
 
-Chemin local par defaut:
+Chemins locaux par defaut:
 
-- `public/data/corridors.geojson`
+- `public/data/corridors/f3_perimetre_arrondi.geojson`
+- `public/data/corridors/f4_perimetre_arrondi.geojson`
 
 Override possible:
 
-- `VITE_CORRIDORS_GEOJSON_URL`
+- `VITE_FAISCEAU_GAILLARD_GEOJSON_URL`
+- `VITE_FAISCEAU_STJULIEN_GEOJSON_URL`
 
 Proprietes utiles par feature:
 
@@ -60,7 +64,7 @@ Template fourni:
 
 ## Lecture / ecriture des contributions
 
-Le front lit et ecrit via `VITE_CONTRIBUTIONS_API_BASE`, par defaut `/api`.
+Le front lit et ecrit via `VITE_CONTRIBUTIONS_API_BASE`, fixe a `/api` en deployment Cloudflare.
 
 Routes attendues:
 
@@ -71,8 +75,10 @@ Routes attendues:
 Important:
 
 - un Google Sheet publie en CSV est seulement lisible
-- pour ecrire les retours utilisateurs, il faut une API intermediaire
-- cette API peut ensuite ecrire dans Sheets, Airtable, Notion, Postgres, etc.
+- le depot fournit deja cette API via `functions/api/*`
+- pour activer cette API, ajoutez un binding KV `CONTRIBUTIONS_KV`
+- sans binding KV, les endpoints `/api/*` repondent en `503`
+- cette API peut ensuite etre redirigee vers D1, R2, Sheets, Airtable, Notion, Postgres, etc.
 
 ## Regenerer les fichiers publics depuis l'atlas
 
@@ -90,11 +96,14 @@ Le script lit les sorties atlas preparees et regenere:
 
 ```env
 VITE_PM_TILES_BIKE_SEGMENT=https://.../bike_agglo_segment.pmtiles
+VITE_PM_TILES_BIKE_CARREAU200=https://.../bike_agglo_carreau200.pmtiles
 VITE_PM_TILES_PERIMETER=https://.../canton_perimeter.pmtiles
 VITE_BIKE_SOURCE_LAYER=bikenet
 VITE_PERIMETER_SOURCE_LAYER=canton_perimeter
-VITE_CORRIDORS_GEOJSON_URL=/data/corridors.geojson
+VITE_FAISCEAU_GAILLARD_GEOJSON_URL=/data/corridors/f3_perimetre_arrondi.geojson
+VITE_FAISCEAU_STJULIEN_GEOJSON_URL=/data/corridors/f4_perimetre_arrondi.geojson
 VITE_CIBLES_GEOJSON_URL=
 VITE_CIBLES_SHEETS_CSV_URL=
+VITE_FORCE_LOCAL_MOCKS=false
 VITE_CONTRIBUTIONS_API_BASE=/api
 ```

@@ -10,6 +10,7 @@ import { VALUE_THRESHOLDS, type BikeMetricKey } from './config/bikeMetrics';
 import { DEFAULT_BASEMAP, type BasemapMode } from './config/basemaps';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from './mock-data/faisceaux';
 import { exportGeoJSON, exportCSV } from './utils/export';
+import { getFingerprint } from './utils/fingerprint';
 
 const Map = lazy(() =>
   import('./components/Map').then((module) => ({ default: module.Map })),
@@ -156,67 +157,83 @@ function AppInner() {
   }, []);
 
   const handleSubmitObservation = useCallback((obs: ObservationLibre) => {
-    const savedId = addObservation(obs);
-    setPendingPoint(null);
-    setSelectedSegment(null);
-    setSelectedObservation(null);
-    toast.success('Observation enregistrée', {
-      description: 'Merci pour votre contribution.',
-      action: {
-        label: 'Annuler',
-        onClick: () => {
-          deleteObservation(savedId);
-          toast.info('Observation supprimée');
+    void addObservation(obs).then((savedId) => {
+      if (!savedId) {
+        toast.error('Echec de l\'enregistrement', {
+          description: 'La contribution n\'a pas pu etre envoyee a Cloudflare.',
+        });
+        return;
+      }
+
+      setPendingPoint(null);
+      setSelectedSegment(null);
+      setSelectedObservation(null);
+      toast.success('Observation enregistrée', {
+        description: 'Merci pour votre contribution.',
+        action: {
+          label: 'Annuler',
+          onClick: () => {
+            void deleteObservation(savedId).then(() => {
+              toast.info('Observation supprimée');
+            });
+          },
         },
-      },
-      duration: 8000,
+        duration: 8000,
+      });
     });
   }, [addObservation, deleteObservation]);
 
   const handleAddCommentaire = useCallback((com: CommentaireGeneral) => {
-    const savedId = addCommentaire(com);
-    toast.success('Commentaire ajouté', {
-      action: {
-        label: 'Annuler',
-        onClick: () => {
-          deleteCommentaire(savedId);
-          toast.info('Commentaire supprimé');
+    void addCommentaire(com).then((savedId) => {
+      if (!savedId) {
+        toast.error('Echec de l\'enregistrement', {
+          description: 'Le commentaire n\'a pas pu etre envoye a Cloudflare.',
+        });
+        return;
+      }
+
+      toast.success('Commentaire ajouté', {
+        action: {
+          label: 'Annuler',
+          onClick: () => {
+            void deleteCommentaire(savedId).then(() => {
+              toast.info('Commentaire supprimé');
+            });
+          },
         },
-      },
-      duration: 8000,
+        duration: 8000,
+      });
     });
   }, [addCommentaire, deleteCommentaire]);
 
   const handleUpdateCommentaire = useCallback((com: CommentaireGeneral) => {
     if (!isOwnCommentaire(com.id)) return;
-    updateCommentaire(com);
-    toast.success('Commentaire mis à jour');
+    void updateCommentaire(com).then(() => {
+      toast.success('Commentaire mis à jour');
+    });
   }, [isOwnCommentaire, updateCommentaire]);
 
   const handleDeleteObservation = useCallback((id: string) => {
     if (!isOwnObservation(id)) return;
-    deleteObservation(id);
-    setSelectedObservation((current) => (current?.id === id ? null : current));
-    toast.info('Votre observation a été supprimée');
+    void deleteObservation(id).then(() => {
+      setSelectedObservation((current) => (current?.id === id ? null : current));
+      toast.info('Votre observation a été supprimée');
+    });
   }, [deleteObservation, isOwnObservation]);
 
   const handleDeleteCommentaire = useCallback((id: string) => {
     if (!isOwnCommentaire(id)) return;
-    deleteCommentaire(id);
-    toast.info('Votre commentaire a été supprimé');
+    void deleteCommentaire(id).then(() => {
+      toast.info('Votre commentaire a été supprimé');
+    });
   }, [deleteCommentaire, isOwnCommentaire]);
 
   const handleVote = useCallback((obsId: string, direction: 'up' | 'down') => {
-    let voterId = localStorage.getItem('cyclabilite_voter_id');
-    if (!voterId) {
-      voterId = `voter_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-      localStorage.setItem('cyclabilite_voter_id', voterId);
-    }
-    voteObservation(obsId, direction, voterId);
+    void voteObservation(obsId, direction, getFingerprint());
   }, [voteObservation]);
 
   const handleAddObservationComment = useCallback((observationId: string, texte: string) => {
-    addObservationComment(observationId, texte);
+    void addObservationComment(observationId, texte);
   }, [addObservationComment]);
 
   const handleExportGeoJSON = useCallback(() => {

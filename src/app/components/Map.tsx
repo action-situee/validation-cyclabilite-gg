@@ -59,7 +59,9 @@ const CARREAU_SOURCE_LAYER = import.meta.env.VITE_BIKE_CARREAU200_SOURCE_LAYER |
 const DEFAULT_VOYAGER_STYLE = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 const DEFAULT_SWISS_LIGHT_STYLE = 'https://vectortiles.geo.admin.ch/styles/ch.swisstopo.lightbasemap.vt/style.json';
 const DEFAULT_SWISS_IMAGERY_STYLE = 'https://vectortiles.geo.admin.ch/styles/ch.swisstopo.imagerybasemap.vt/style.json';
-const DEFAULT_PERIMETER_PMTILES = '/tiles/canton_perimeter.pmtiles';
+const DEFAULT_BIKE_SEGMENT_PMTILES = import.meta.env.PROD ? '/api/pmtiles/bike-segment' : '/tiles/bike_agglo_segment.pmtiles';
+const DEFAULT_BIKE_CARREAU200_PMTILES = import.meta.env.PROD ? '/api/pmtiles/bike-carreau200' : '/tiles/bike_agglo_carreau200.pmtiles';
+const DEFAULT_PERIMETER_PMTILES = import.meta.env.PROD ? '/api/pmtiles/perimeter' : '/tiles/canton_perimeter.pmtiles';
 const DEFAULT_PERIMETER_SOURCE_LAYER = 'canton_perimeter';
 const SEGMENT_DETAIL_ZOOM = 11;
 const SCALE_BLEND_START = 10.7;
@@ -69,8 +71,8 @@ const WATER_LAYER_PATTERN = /water|lake|riverbank|reservoir|bassin|hydro/i;
 const ROUTE_NUMBER_LAYER_PATTERN = /shield|road[-_ ]?number|route[-_ ]?number|strassen[-_ ]?nummer|strassennummer|routenummer|highway[-_ ]?number|motorway[-_ ]?number|nationalstrasse|autobahn/i;
 const ROUTE_NUMBER_FIELD_PATTERN = /shield|road[-_ ]?number|route[-_ ]?number|strassen[-_ ]?nummer|strassennummer|routenummer|ref|nationalstrasse|autobahn/i;
 const env = import.meta.env as Record<string, string | undefined>;
-const BIKE_PM_TILES_URL = env.VITE_PM_TILES_BIKE_SEGMENT || '/tiles/bike_agglo_segment.pmtiles';
-const BIKE_CARREAU200_PM_TILES_URL = env.VITE_PM_TILES_BIKE_CARREAU200 || '/tiles/bike_agglo_carreau200.pmtiles';
+const BIKE_PM_TILES_URL = env.VITE_PM_TILES_BIKE_SEGMENT || DEFAULT_BIKE_SEGMENT_PMTILES;
+const BIKE_CARREAU200_PM_TILES_URL = env.VITE_PM_TILES_BIKE_CARREAU200 || DEFAULT_BIKE_CARREAU200_PMTILES;
 const PERIMETER_PM_TILES_URL = env.VITE_PM_TILES_PERIMETER || DEFAULT_PERIMETER_PMTILES;
 const PERIMETER_SOURCE_LAYER = env.VITE_PERIMETER_SOURCE_LAYER || DEFAULT_PERIMETER_SOURCE_LAYER;
 const SEGMENT_QUERY_RADII = [0, 18, 36, 72, 144];
@@ -193,6 +195,14 @@ type OverlayFaisceauPath = {
   id: string;
   path: string;
   selected: boolean;
+  color: string;
+};
+
+type OverlayMaskState = {
+  width: number;
+  height: number;
+  maskPath: string;
+  faisceaux: OverlayFaisceauPath[];
 };
 
 function buildCiblesGeoJson(cibles: Cible[]) {
@@ -859,7 +869,7 @@ function MapInner({
   const [perimeterAvailable, setPerimeterAvailable] = useState(Boolean(PERIMETER_PM_TILES_URL));
   const [cameraDebug, setCameraDebug] = useState<CameraState>(cameraStateRef.current);
   const [cursorDebug, setCursorDebug] = useState<{ lng: number; lat: number } | null>(null);
-  const [overlayFaisceaux, setOverlayFaisceaux] = useState<OverlayFaisceauPath[]>([]);
+  const [overlayMask, setOverlayMask] = useState<OverlayMaskState | null>(null);
 
   useEffect(() => {
     onCibleClickRef.current = onCibleClick;
@@ -1818,7 +1828,7 @@ function MapInner({
   useEffect(() => {
     const map = mapRef.current;
     if (!mapReady || !map || !showFaisceaux) {
-      setOverlayFaisceaux([]);
+      setOverlayMask(null);
       return;
     }
 
@@ -1845,9 +1855,31 @@ function MapInner({
           id: faisceau.id,
           path: d,
           selected: Boolean(selectedFaisceau) && faisceau.id === selectedFaisceau,
+          color: faisceau.color,
         });
       });
-      setOverlayFaisceaux(next);
+
+      const canvas = map.getCanvas();
+      const width = Math.max(canvas.clientWidth || canvas.width || 0, 1);
+      const height = Math.max(canvas.clientHeight || canvas.height || 0, 1);
+      const visibleIds = new Set(
+        (selectedFaisceau ? [selectedFaisceau] : next.map((item) => item.id)).filter(Boolean),
+      );
+      const maskPath = [
+        `M 0 0 H ${width.toFixed(1)} V ${height.toFixed(1)} H 0 Z`,
+        ...next.filter((item) => visibleIds.has(item.id)).map((item) => item.path),
+      ].join(' ');
+
+      setOverlayMask(
+        next.length > 0
+          ? {
+              width,
+              height,
+              maskPath,
+              faisceaux: next,
+            }
+          : null,
+      );
     };
 
     buildOverlay();
@@ -1957,7 +1989,7 @@ function MapInner({
       <div className="w-full h-full flex items-center justify-center bg-[#eae8e0]">
         <div className="text-center p-4">
           <p className="text-[12px] text-[#0a0a0a] mb-2 uppercase tracking-wider">Impossible de charger la carte</p>
-          <p className="text-[11px] text-[#5c5c5c]">Verifiez la presence du PMTiles local ou la variable `VITE_PM_TILES_BIKE_SEGMENT`.</p>
+          <p className="text-[11px] text-[#5c5c5c]">Verifiez la route /api/pmtiles ou la variable VITE_PM_TILES_BIKE_SEGMENT.</p>
         </div>
       </div>
     );
@@ -1967,22 +1999,30 @@ function MapInner({
     <div className="w-full h-full relative">
       <div ref={containerRef} className="w-full h-full" />
 
-      {overlayFaisceaux.length > 0 && (
+      {overlayMask && (
         <svg
           className="absolute inset-0 pointer-events-none"
           style={{ zIndex: 4 }}
           width="100%"
           height="100%"
+          viewBox={`0 0 ${overlayMask.width} ${overlayMask.height}`}
+          preserveAspectRatio="none"
         >
-          {/* Outlines (violet) */}
-          {overlayFaisceaux.map((item) => (
+          <path
+            d={overlayMask.maskPath}
+            fill="#111111"
+            fillRule="evenodd"
+            opacity={selectedFaisceau ? 0.22 : 0.14}
+          />
+          {overlayMask.faisceaux.map((item) => (
             <path
               key={item.id}
               d={item.path}
               fill="none"
-              stroke="#7b2ff7"
-              strokeWidth={item.selected ? 3.6 : 2.6}
-              opacity={1}
+              stroke={item.selected ? item.color : '#4b5563'}
+              strokeWidth={item.selected ? 3.4 : 2.2}
+              strokeDasharray={item.selected ? undefined : '8 6'}
+              opacity={item.selected || !selectedFaisceau ? 0.92 : 0.55}
             />
           ))}
         </svg>

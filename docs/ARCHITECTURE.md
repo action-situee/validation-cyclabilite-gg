@@ -4,7 +4,7 @@ Le depot a 4 zones utiles:
 
 1. `src/` : frontend React/Vite.
 2. `public/data/` : fichiers statiques lus par le front (`corridors.geojson`, quantiles, CSV mocks).
-3. `src/app/utils/api.ts` : contrat HTTP optionnel pour une future API distante.
+3. `src/app/utils/api.ts` : contrat HTTP du front vers les endpoints `/api`.
 4. `copie-atlas-marchabilite-cyclabilite/` : source cartographique de reference pour regenerer l'indice.
 
 ## Fichiers clefs
@@ -21,7 +21,7 @@ Le depot a 4 zones utiles:
 
 - Indice carte : `VITE_PM_TILES_BIKE_SEGMENT`
 - Frontiere carte : `VITE_PM_TILES_PERIMETER`
-- Corridors : `VITE_CORRIDORS_GEOJSON_URL` ou `public/data/corridors.geojson`
+- Faisceaux : `VITE_FAISCEAU_GAILLARD_GEOJSON_URL`, `VITE_FAISCEAU_STJULIEN_GEOJSON_URL` ou les GeoJSON locaux dans `public/data/corridors/`
 - Points d'attention : `VITE_CIBLES_GEOJSON_URL` ou `VITE_CIBLES_SHEETS_CSV_URL`
 - Retours terrain : `VITE_OBSERVATIONS_SHEETS_CSV_URL` ou `public/data/google-sheets/remontees-mock.csv`
 - Commentaires : `VITE_COMMENTAIRES_SHEETS_CSV_URL` ou `public/data/google-sheets/commentaires-mock.csv`
@@ -36,3 +36,5 @@ Le depot a 4 zones utiles:
 - Questionnaire : `POST /api/surveys`
 
 En local, sans `VITE_CONTRIBUTIONS_API_BASE`, ces ecritures restent locales au navigateur via `localStorage`. En prod, il faut fournir une API via `VITE_CONTRIBUTIONS_API_BASE`.
+
+Le depot contient maintenant cette API dans `functions/api/` pour Cloudflare Pages. Avec un binding `CONTRIBUTIONS_KV`, elle devient persistante; sans binding, elle repond en `503` pour signaler une configuration Cloudflare incomplete.

@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { X, ClipboardCheck, Send, CheckCircle } from 'lucide-react';
 import { contributionsApi } from '../utils/api';
-
-const STORAGE_KEY = 'cyclabilite_survey';
+import { getFingerprint, resolveFingerprint } from '../utils/fingerprint';
 
 interface SurveyData {
+  id?: string;
   q1: string;
   q2: string;
   q3: string;
   auteur: string;
   date: string;
+  owner_fingerprint?: string;
 }
 
 const LIKERT_OPTIONS = [
@@ -98,28 +99,38 @@ export function SurveyModal({ open, onClose, onSubmitted }: SurveyModalProps) {
   useEffect(() => {
     if (!open) return;
 
-    try {
-      const existing = localStorage.getItem(STORAGE_KEY);
-      if (existing) {
-        const data = JSON.parse(existing) as SurveyData;
-        setPreviousResponse(data);
-        setAlreadyAnswered(true);
-        setQ1(data.q1);
-        setQ2(data.q2);
-        setQ3(data.q3);
-        setAuteur(data.auteur);
-      } else {
+    void resolveFingerprint()
+      .then(() => contributionsApi.getSurveys())
+      .then((surveys) => {
+        const ownerFingerprint = getFingerprint();
+        const existing = (surveys || [])
+          .filter((survey) => survey.owner_fingerprint === ownerFingerprint)
+          .sort((a, b) => String(b.date).localeCompare(String(a.date)))[0] as SurveyData | undefined;
+
+        if (existing) {
+          setPreviousResponse(existing);
+          setAlreadyAnswered(true);
+          setQ1(existing.q1);
+          setQ2(existing.q2);
+          setQ3(existing.q3);
+          setAuteur(existing.auteur);
+        } else {
+          setAlreadyAnswered(false);
+          setPreviousResponse(null);
+          setQ1('');
+          setQ2('');
+          setQ3('');
+          setAuteur('');
+        }
+      })
+      .catch(() => {
         setAlreadyAnswered(false);
         setPreviousResponse(null);
         setQ1('');
         setQ2('');
         setQ3('');
         setAuteur('');
-      }
-    } catch {
-      setAlreadyAnswered(false);
-      setPreviousResponse(null);
-    }
+      });
 
     setSubmitted(false);
   }, [open]);
@@ -138,25 +149,19 @@ export function SurveyModal({ open, onClose, onSubmitted }: SurveyModalProps) {
       q3: q3.trim(),
       auteur: auteur.trim() || 'Anonyme',
       date: new Date().toISOString().slice(0, 10),
+      owner_fingerprint: getFingerprint(),
     };
 
-    try {
-      const allKey = 'cyclabilite_survey_all';
-      const existing = localStorage.getItem(allKey);
-      const all: SurveyData[] = existing ? JSON.parse(existing) : [];
-      all.push(response);
-      localStorage.setItem(allKey, JSON.stringify(all));
-    } catch {
-      // ignore local survey aggregation errors
-    }
+    void contributionsApi.createSurvey(response).then((saved) => {
+      if (!saved) return;
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(response));
-    void contributionsApi.createSurvey(response);
-
-    setSubmitted(true);
-    setTimeout(() => {
-      onSubmitted(response.q3 || undefined, response.auteur, response.date);
-    }, 1500);
+      setPreviousResponse(saved);
+      setAlreadyAnswered(true);
+      setSubmitted(true);
+      setTimeout(() => {
+        onSubmitted(saved.q3 || undefined, saved.auteur, saved.date);
+      }, 1500);
+    });
   };
 
   const handleReset = () => {
@@ -166,7 +171,6 @@ export function SurveyModal({ open, onClose, onSubmitted }: SurveyModalProps) {
     setQ2('');
     setQ3('');
     setAuteur('');
-    localStorage.removeItem(STORAGE_KEY);
   };
 
   return (

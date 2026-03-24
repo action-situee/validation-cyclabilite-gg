@@ -1,6 +1,6 @@
 import type { CommentaireGeneral, ObservationLibre, SurveyResponse } from '../types';
 
-const API_BASE = import.meta.env.VITE_CONTRIBUTIONS_API_BASE || '';
+const API_BASE = import.meta.env.VITE_CONTRIBUTIONS_API_BASE || '/api';
 let warnedMissingApiBase = false;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T | null> {
@@ -8,7 +8,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T | null> {
     if (!warnedMissingApiBase) {
       warnedMissingApiBase = true;
       console.warn(
-        '[contributionsApi] Aucun endpoint d\'ecriture configure. Les contributions restent locales au navigateur tant que VITE_CONTRIBUTIONS_API_BASE n\'est pas defini.',
+        '[contributionsApi] Aucun endpoint configure. Les contributions Cloudflare sont indisponibles tant que VITE_CONTRIBUTIONS_API_BASE n\'est pas defini.',
       );
     }
     return null;
@@ -35,6 +35,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T | null> {
 export const contributionsApi = {
   async getObservations(): Promise<ObservationLibre[] | null> {
     return request<ObservationLibre[]>('/observations');
+  },
+
+  async getSurveys(): Promise<SurveyResponse[] | null> {
+    return request<SurveyResponse[]>('/surveys');
   },
 
   async createObservation(observation: ObservationLibre): Promise<ObservationLibre | null> {
@@ -65,6 +69,13 @@ export const contributionsApi = {
   async createCommentaire(commentaire: CommentaireGeneral): Promise<CommentaireGeneral | null> {
     return request<CommentaireGeneral>('/commentaires', {
       method: 'POST',
+      body: JSON.stringify(commentaire),
+    });
+  },
+
+  async updateCommentaire(commentaire: CommentaireGeneral): Promise<CommentaireGeneral | null> {
+    return request<CommentaireGeneral>(`/commentaires/${commentaire.id}`, {
+      method: 'PUT',
       body: JSON.stringify(commentaire),
     });
   },

@@ -7,7 +7,9 @@
     "data:prepare": "node ./scripts/prepare-public-data.mjs",
     "dev": "vite --host 0.0.0.0",
     "build": "npm run data:prepare && vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "pages:prepare": "node ./scripts/prune-pages-dist.mjs",
+    "deploy:pages": "npm run build && npm run pages:prepare && npx wrangler pages deploy dist --project-name validation-cyclabilite-gg --commit-dirty=true"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

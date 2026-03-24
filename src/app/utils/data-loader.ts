@@ -25,7 +25,7 @@ const env = import.meta.env as Record<string, string | undefined>;
 const DEFAULT_CIBLES_SHEETS_CSV_URL = '/data/google-sheets/cibles-mock.csv';
 const DEFAULT_OBSERVATIONS_SHEETS_CSV_URL = '/data/google-sheets/remontees-mock.csv';
 const DEFAULT_COMMENTAIRES_SHEETS_CSV_URL = '/data/google-sheets/commentaires-mock.csv';
-const LOCAL_MOCKS_ONLY = true;
+const FORCE_LOCAL_MOCKS = env.VITE_FORCE_LOCAL_MOCKS === 'true';
 
 // ─────────────────────────────────────────────────
 // SOURCES DE DONNÉES – à configurer ici
@@ -60,7 +60,7 @@ export const FAISCEAU_STJULIEN_GEOJSON_URL =
  * Propriétés optionnelles :
  *   sous_titre_affichage, question_cle
  */
-export const CIBLES_GEOJSON_URL = '';
+export const CIBLES_GEOJSON_URL = env.VITE_CIBLES_GEOJSON_URL || '';
 
 /**
  * URL du Google Sheet publié en CSV pour les points d'attention.
@@ -73,7 +73,7 @@ export const CIBLES_GEOJSON_URL = '';
  * Colonnes facultatives :
  *   sous_titre_affichage, question_cle
  */
-export const CIBLES_SHEETS_CSV_URL = LOCAL_MOCKS_ONLY
+export const CIBLES_SHEETS_CSV_URL = FORCE_LOCAL_MOCKS
   ? DEFAULT_CIBLES_SHEETS_CSV_URL
   : env.VITE_CIBLES_SHEETS_CSV_URL || DEFAULT_CIBLES_SHEETS_CSV_URL;
 
@@ -81,7 +81,7 @@ export const CIBLES_SHEETS_CSV_URL = LOCAL_MOCKS_ONLY
  * URL du CSV local des retours terrain.
  */
 export const OBSERVATIONS_SHEETS_CSV_URL =
-  LOCAL_MOCKS_ONLY
+  FORCE_LOCAL_MOCKS
     ? DEFAULT_OBSERVATIONS_SHEETS_CSV_URL
     : env.VITE_OBSERVATIONS_SHEETS_CSV_URL || DEFAULT_OBSERVATIONS_SHEETS_CSV_URL;
 
@@ -89,7 +89,7 @@ export const OBSERVATIONS_SHEETS_CSV_URL =
  * URL du CSV local des commentaires generaux.
  */
 export const COMMENTAIRES_SHEETS_CSV_URL =
-  LOCAL_MOCKS_ONLY
+  FORCE_LOCAL_MOCKS
     ? DEFAULT_COMMENTAIRES_SHEETS_CSV_URL
     : env.VITE_COMMENTAIRES_SHEETS_CSV_URL || DEFAULT_COMMENTAIRES_SHEETS_CSV_URL;
 

@@ -179,4 +179,5 @@ export interface SurveyResponse {
   q2: string;
   q3: string;
   date: string;
+  owner_fingerprint?: string;
 }
