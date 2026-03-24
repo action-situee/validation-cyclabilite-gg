@@ -11,14 +11,14 @@ Portail collaboratif de validation de l'indice de cyclabilite du Grand Geneve.
 | Couche frontiere `F` | `.pmtiles` vectoriel | URL distante atlas | `VITE_PM_TILES_PERIMETER` |
 | Delimitations des faisceaux | `.geojson` Polygon / MultiPolygon | `public/data/corridors/f3_perimetre_arrondi.geojson` et `public/data/corridors/f4_perimetre_arrondi.geojson` | `VITE_FAISCEAU_GAILLARD_GEOJSON_URL` / `VITE_FAISCEAU_STJULIEN_GEOJSON_URL` |
 | Points d'attention | `.geojson` Point ou CSV | mock local | `VITE_CIBLES_GEOJSON_URL` / `VITE_CIBLES_SHEETS_CSV_URL` |
-| Retours terrain | CSV | `public/data/google-sheets/remontees-mock.csv` | `VITE_OBSERVATIONS_SHEETS_CSV_URL` |
-| Commentaires generaux | CSV | `public/data/google-sheets/commentaires-mock.csv` | `VITE_COMMENTAIRES_SHEETS_CSV_URL` |
+| Retours terrain | CSV | mock local en dev uniquement | `VITE_OBSERVATIONS_SHEETS_CSV_URL` |
+| Commentaires generaux | CSV | mock local en dev uniquement | `VITE_COMMENTAIRES_SHEETS_CSV_URL` |
 | Quantiles de l'indice | `.json` | `public/data/atlas/bike-metric-quantiles.json` | regenere par script |
 | Ecriture distante des contributions | endpoints HTTP JSON optionnels | desactivee en local | `VITE_CONTRIBUTIONS_API_BASE` |
 
 Le portail ne lit pas directement un `.parquet` dans le navigateur. Le brut vit dans `copie-atlas-marchabilite-cyclabilite/` puis passe par le pipeline atlas (`parquet -> ndjson/tiles -> pmtiles + quantiles`).
 
-Par defaut, les CSV mock locaux restent le fallback. Pour forcer explicitement ce mode, definir `VITE_FORCE_LOCAL_MOCKS=true`. Sinon, toute URL `VITE_*` renseignee sera prise en compte avant le fallback local.
+En developpement, les CSV mock locaux restent le fallback. En production, les remontees et commentaires ne tombent plus sur les mocks par defaut: il faut soit renseigner `VITE_OBSERVATIONS_SHEETS_CSV_URL` et `VITE_COMMENTAIRES_SHEETS_CSV_URL`, soit laisser D1 fournir uniquement les contributions via `/api`. Pour forcer explicitement le mode mock, definir `VITE_FORCE_LOCAL_MOCKS=true`.
 
 ## Lecture locale
 

@@ -23,8 +23,8 @@ Le depot a 4 zones utiles:
 - Frontiere carte : `VITE_PM_TILES_PERIMETER`
 - Faisceaux : `VITE_FAISCEAU_GAILLARD_GEOJSON_URL`, `VITE_FAISCEAU_STJULIEN_GEOJSON_URL` ou les GeoJSON locaux dans `public/data/corridors/`
 - Points d'attention : `VITE_CIBLES_GEOJSON_URL` ou `VITE_CIBLES_SHEETS_CSV_URL`
-- Retours terrain : `VITE_OBSERVATIONS_SHEETS_CSV_URL` ou `public/data/google-sheets/remontees-mock.csv`
-- Commentaires : `VITE_COMMENTAIRES_SHEETS_CSV_URL` ou `public/data/google-sheets/commentaires-mock.csv`
+- Retours terrain : `VITE_OBSERVATIONS_SHEETS_CSV_URL` ou mock local en dev uniquement
+- Commentaires : `VITE_COMMENTAIRES_SHEETS_CSV_URL` ou mock local en dev uniquement
 - Questionnaires existants : `public/data/google-sheets/questionnaire-mock.csv`
 - Fallback d'ecriture locale : `localStorage`
 

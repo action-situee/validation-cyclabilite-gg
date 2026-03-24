@@ -51,10 +51,10 @@ migrations_dir = "migrations"
 - `VITE_PM_TILES_BIKE_CARREAU200` si vous ne servez pas `public/tiles/bike_agglo_carreau200.pmtiles`
 - `public/data/corridors/f3_perimetre_arrondi.geojson` et `public/data/corridors/f4_perimetre_arrondi.geojson`, ou les variables `VITE_FAISCEAU_GAILLARD_GEOJSON_URL` et `VITE_FAISCEAU_STJULIEN_GEOJSON_URL`
 - `VITE_CIBLES_GEOJSON_URL` ou `VITE_CIBLES_SHEETS_CSV_URL` si vous ne voulez pas les mocks
-- `VITE_OBSERVATIONS_SHEETS_CSV_URL` et `VITE_COMMENTAIRES_SHEETS_CSV_URL` si vous remplacez les CSV mock locaux
+- `VITE_OBSERVATIONS_SHEETS_CSV_URL` et `VITE_COMMENTAIRES_SHEETS_CSV_URL` si vous voulez afficher des retours/commentaires tabulaires sources autres que D1
 - `VITE_CONTRIBUTIONS_API_BASE=/api` pour utiliser les Pages Functions incluses
 - un binding D1 `CONTRIBUTIONS_DB` si vous voulez une persistance durable des contributions
-- `VITE_FORCE_LOCAL_MOCKS=true` uniquement si vous voulez desactiver toutes les sources distantes CSV cote front
+- `VITE_FORCE_LOCAL_MOCKS=true` uniquement si vous voulez forcer les CSV mock locaux, y compris en production
 
 ## Contrat local de dev
 

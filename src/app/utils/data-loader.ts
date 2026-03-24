@@ -22,6 +22,7 @@ import { BikeSegment, Cible, CommentaireGeneral, Faisceau, ObservationLibre } fr
 import { FAISCEAUX as DEFAULT_FAISCEAUX } from '../mock-data/faisceaux';
 
 const env = import.meta.env as Record<string, string | undefined>;
+const IS_PROD = import.meta.env.PROD;
 const DEFAULT_CIBLES_SHEETS_CSV_URL = '/data/google-sheets/cibles-mock.csv';
 const DEFAULT_OBSERVATIONS_SHEETS_CSV_URL = '/data/google-sheets/remontees-mock.csv';
 const DEFAULT_COMMENTAIRES_SHEETS_CSV_URL = '/data/google-sheets/commentaires-mock.csv';
@@ -83,7 +84,7 @@ export const CIBLES_SHEETS_CSV_URL = FORCE_LOCAL_MOCKS
 export const OBSERVATIONS_SHEETS_CSV_URL =
   FORCE_LOCAL_MOCKS
     ? DEFAULT_OBSERVATIONS_SHEETS_CSV_URL
-    : env.VITE_OBSERVATIONS_SHEETS_CSV_URL || DEFAULT_OBSERVATIONS_SHEETS_CSV_URL;
+    : env.VITE_OBSERVATIONS_SHEETS_CSV_URL || (IS_PROD ? '' : DEFAULT_OBSERVATIONS_SHEETS_CSV_URL);
 
 /**
  * URL du CSV local des commentaires generaux.
@@ -91,7 +92,7 @@ export const OBSERVATIONS_SHEETS_CSV_URL =
 export const COMMENTAIRES_SHEETS_CSV_URL =
   FORCE_LOCAL_MOCKS
     ? DEFAULT_COMMENTAIRES_SHEETS_CSV_URL
-    : env.VITE_COMMENTAIRES_SHEETS_CSV_URL || DEFAULT_COMMENTAIRES_SHEETS_CSV_URL;
+    : env.VITE_COMMENTAIRES_SHEETS_CSV_URL || (IS_PROD ? '' : DEFAULT_COMMENTAIRES_SHEETS_CSV_URL);
 
 /**
  * URL du GeoJSON segmentaire derive de l'atlas.
