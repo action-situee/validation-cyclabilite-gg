@@ -73,7 +73,9 @@ const ROUTE_NUMBER_FIELD_PATTERN = /shield|road[-_ ]?number|route[-_ ]?number|st
 const env = import.meta.env as Record<string, string | undefined>;
 const BIKE_PM_TILES_URL = env.VITE_PM_TILES_BIKE_SEGMENT || DEFAULT_BIKE_SEGMENT_PMTILES;
 const BIKE_CARREAU200_PM_TILES_URL = env.VITE_PM_TILES_BIKE_CARREAU200 || DEFAULT_BIKE_CARREAU200_PMTILES;
-const PERIMETER_PM_TILES_URL = env.VITE_PM_TILES_PERIMETER || DEFAULT_PERIMETER_PMTILES;
+const PERIMETER_PM_TILES_URL = import.meta.env.PROD
+  ? DEFAULT_PERIMETER_PMTILES
+  : env.VITE_PM_TILES_PERIMETER || DEFAULT_PERIMETER_PMTILES;
 const PERIMETER_SOURCE_LAYER = env.VITE_PERIMETER_SOURCE_LAYER || DEFAULT_PERIMETER_SOURCE_LAYER;
 const SEGMENT_QUERY_RADII = [0, 18, 36, 72, 144];
 const MODUS_LOGO_URL = 'https://github.com/action-situee/assets/blob/main/images/modus-2025.png?raw=true';
@@ -332,6 +334,7 @@ function buildSelectedSegmentFromFeature(
   options?: {
     fallbackId?: string;
     spatialUnit?: BikeSegment['spatial_unit'];
+    metricThresholds?: number[];
   },
 ): BikeSegment {
   const matchedFaisceau = findFaisceauForPoint([lng, lat], faisceaux, selectedFaisceau);
@@ -348,7 +351,7 @@ function buildSelectedSegmentFromFeature(
     faisceau_nom: matchedFaisceau?.nom || (spatialUnit === 'carreau200' ? 'Grand Geneve · carreau 200 m' : 'Grand Geneve'),
     faisceau_color: matchedFaisceau?.color || '#2E6A4A',
     bike_index: bikeIndex,
-    bike_index_class: getMetricClass(bikeIndex),
+    bike_index_class: getMetricClass(bikeIndex, options?.metricThresholds),
     length: toNumber(properties.length) || 0,
     center: [lat, lng],
     bike_index_unweighted: toNumber(properties.bike_index_unweighted) || undefined,
@@ -1405,6 +1408,7 @@ function MapInner({
                 event.lngLat.lat,
                 faisceauxRef.current,
                 selectedFaisceauRef.current,
+                { metricThresholds: metricThresholdsRef.current },
               )
             : null;
 
@@ -1444,6 +1448,7 @@ function MapInner({
               event.lngLat.lat,
               faisceauxRef.current,
               selectedFaisceauRef.current,
+              { metricThresholds: metricThresholdsRef.current },
             ),
           );
           return;
@@ -1516,6 +1521,7 @@ function MapInner({
               selectedFaisceauRef.current,
               {
                 fallbackId: String(hoveredFeature.id || hoveredFeature.properties.id || ''),
+                metricThresholds: metricThresholdsRef.current,
                 spatialUnit: displayScaleRef.current,
               },
             ),

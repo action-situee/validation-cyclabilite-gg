@@ -2,7 +2,7 @@ import React from 'react';
 import { Bike } from 'lucide-react';
 import type { BikeSegment } from '../types';
 import { HoveredSegmentCard } from './HoveredSegmentCard';
-import { VALUE_PALETTE, VALUE_THRESHOLDS, type BikeMetricKey } from '../config/bikeMetrics';
+import { buildQuantileLegendBins, VALUE_THRESHOLDS, type BikeMetricKey } from '../config/bikeMetrics';
 import { InfoTip } from './InfoTip';
 
 interface SidebarProps {
@@ -22,35 +22,8 @@ export function Sidebar({
   hoveredSegmentSource,
   activeThresholds,
 }: SidebarProps) {
-  const formatThreshold = (value: number) => {
-    if (value < 0.001) return value.toFixed(4);
-    if (value < 0.01) return value.toFixed(3);
-    return value.toFixed(2);
-  };
-
   const safeThresholds = activeThresholds.length > 0 ? activeThresholds : [...VALUE_THRESHOLDS];
-  const legendBins = [
-    {
-      color: VALUE_PALETTE[1],
-      label: `< ${formatThreshold(safeThresholds[2])}`,
-    },
-    {
-      color: VALUE_PALETTE[3],
-      label: `${formatThreshold(safeThresholds[2])} - ${formatThreshold(safeThresholds[4])}`,
-    },
-    {
-      color: VALUE_PALETTE[5],
-      label: `${formatThreshold(safeThresholds[4])} - ${formatThreshold(safeThresholds[6])}`,
-    },
-    {
-      color: VALUE_PALETTE[7],
-      label: `${formatThreshold(safeThresholds[6])} - ${formatThreshold(safeThresholds[8])}`,
-    },
-    {
-      color: VALUE_PALETTE[9],
-      label: `>= ${formatThreshold(safeThresholds[8])}`,
-    },
-  ];
+  const legendBins = buildQuantileLegendBins(safeThresholds);
 
   return (
     <div className={`w-[360px] bg-[rgba(229,238,230,0.82)] backdrop-blur-[2px] border-l-2 border-[#0a0a0a] flex flex-col h-full overflow-hidden ${className}`}>
@@ -91,11 +64,15 @@ export function Sidebar({
         <div className="p-4 bg-[rgba(229,238,230,0.66)]">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h3 className="text-[10px] uppercase tracking-[0.15em] text-[#5c5c5c]">
-              Legende quantiles
+              Legende quantile
             </h3>
-            <InfoTip text="Les couleurs sont calculees en quantiles sur tout le territoire du Grand Geneve, pas uniquement sur la vue courante." />
+            <InfoTip text="Les couleurs utilisent les seuils quantiles publies pour toute la distribution territoriale. La legende reprend exactement les classes appliquees sur la carte." />
           </div>
-          <div className="space-y-1.5">
+          <div className="mb-3 inline-flex items-center gap-2 border border-[#c9d0cc] bg-white px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[#2E6A4A]">
+            <span className="inline-block h-2 w-2 rounded-full bg-[#2E6A4A]" />
+            Mode quantile
+          </div>
+          <div className="grid grid-cols-1 gap-1.5">
             {legendBins.map((bin) => (
               <div key={`${bin.color}-${bin.label}`} className="flex items-center gap-2">
                 <span
