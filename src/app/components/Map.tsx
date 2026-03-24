@@ -90,8 +90,6 @@ const CORRIDORS_SOURCE_LAYER = env.VITE_CORRIDORS_SOURCE_LAYER || DEFAULT_CORRID
 const CORRIDORS_MASK_PM_TILES_URL = env.VITE_PM_TILES_CORRIDORS_MASK || DEFAULT_CORRIDORS_MASK_PMTILES;
 const CORRIDORS_MASK_SOURCE_LAYER = env.VITE_CORRIDORS_MASK_SOURCE_LAYER || DEFAULT_CORRIDORS_MASK_SOURCE_LAYER;
 const SEGMENT_QUERY_RADII = [0, 18, 36, 72, 144];
-const MODUS_LOGO_URL = 'https://github.com/action-situee/assets/blob/main/images/modus-2025.png?raw=true';
-const GENEVE_LOGO_URL = 'https://raw.githubusercontent.com/action-situee/assets/380a38d67ffe6f8270cf52c0d9431d1f05f3b12e/images/Logo_Genf.svg';
 type RenderedFeature = GeoJSON.Feature<GeoJSON.Geometry, GeoJSON.GeoJsonProperties> & {
   properties?: Record<string, unknown>;
 };
@@ -2288,23 +2286,15 @@ function MapInner({
       <div className="absolute z-10 pointer-events-none" style={{ top: 16, left: 16 }}>
         <div
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: 10,
+            padding: '2px 0',
+            background: 'transparent',
           }}
         >
-          <img
-            src={MODUS_LOGO_URL}
-            alt="Modus"
-            style={{ height: 24, width: 'auto', display: 'block' }}
-            referrerPolicy="no-referrer"
-          />
-          <img
-            src={GENEVE_LOGO_URL}
-            alt="Geneve"
-            style={{ height: 26, width: 'auto', display: 'block' }}
-            referrerPolicy="no-referrer"
-          />
+          <span style={{ fontSize: 11, lineHeight: 1, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(31,43,36,0.82)', fontWeight: 700 }}>
+            Outil de travail
+          </span>
         </div>
       </div>
 
@@ -2435,7 +2425,7 @@ function MapInner({
           textOverflow: 'ellipsis',
         }}
       >
-        z {formatZoom(cameraDebug.zoom)} | cursor {cursorDebug ? `${formatCoordinate(cursorDebug.lng)}, ${formatCoordinate(cursorDebug.lat)}` : '-, -'} | cam {formatCoordinate(cameraDebug.center[0])}, {formatCoordinate(cameraDebug.center[1])} | b {formatAngle(cameraDebug.bearing)} | p {formatAngle(cameraDebug.pitch)}
+        z {formatZoom(cameraDebug.zoom)} | cursor {cursorDebug ? `${formatCoordinate(cursorDebug.lng)}, ${formatCoordinate(cursorDebug.lat)}` : '-, -'} | cam {formatCoordinate(cameraDebug.center[0])}, {formatCoordinate(cameraDebug.center[1])} | b {formatAngle(cameraDebug.bearing)} | p {formatAngle(cameraDebug.pitch)} | @ Située 2026
       </div>
     </div>
   );

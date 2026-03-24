@@ -14,6 +14,8 @@ import { getFingerprint } from './utils/fingerprint';
 
 const HELP_MODAL_DISMISSED_KEY = 'validation-cyclabilite-help-dismissed';
 const SITUEE_LOGO_URL = 'https://raw.githubusercontent.com/action-situee/assets/refs/heads/main/images/Fichier_36-5.svg';
+const MODUS_LOGO_URL = 'https://github.com/action-situee/assets/blob/main/images/modus-2025.png?raw=true';
+const GENEVE_LOGO_URL = 'https://raw.githubusercontent.com/action-situee/assets/380a38d67ffe6f8270cf52c0d9431d1f05f3b12e/images/Logo_Genf.svg';
 
 const Map = lazy(() =>
   import('./components/Map').then((module) => ({ default: module.Map })),
@@ -599,7 +601,7 @@ function AppInner() {
 
                 <div className="pt-1">
                   <p className="text-[11px] text-[#5c5c5c] leading-relaxed">
-                    Vers l&apos;application dédiée pour observer l&apos;indice :{' '}
+                    L&apos;indice s&apos;affiche sur la carte ! Vous pouvez comparer les classes ci-dessous et contribuer à la carte en ajoutant vos commentaires via le bouton Consignes.
                     <a
                       href="https://active.situee.ch"
                       target="_blank"
@@ -609,6 +611,30 @@ function AppInner() {
                       active.situee.ch
                     </a>
                   </p>
+                </div>
+
+                <div className="border-t border-[#ece9e4] pt-3">
+                  <div className="space-y-3 opacity-80">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c] mb-2">
+                        Avec la participation de :
+                      </p>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <img
+                          src={MODUS_LOGO_URL}
+                          alt="Modus"
+                          className="h-4 w-auto"
+                          referrerPolicy="no-referrer"
+                        />
+                        <img
+                          src={GENEVE_LOGO_URL}
+                          alt="Genève"
+                          className="h-5 w-auto"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
