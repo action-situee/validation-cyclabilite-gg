@@ -256,6 +256,15 @@ async function writeText(filePath, text) {
   await fs.writeFile(filePath, text, 'utf8');
 }
 
+async function fileExists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function prepareCorridorsGeoJson() {
   const features = corridors.map((corridor) => ({
     type: 'Feature',
@@ -302,6 +311,19 @@ async function prepareBikeSegments() {
   try {
     await fs.access(atlasPaths.sourceNdjson);
   } catch {
+    const existingOutputs = await Promise.all([
+      fileExists(atlasPaths.outputSegments),
+      fileExists(atlasPaths.outputSummary),
+      fileExists(atlasPaths.outputQuantiles),
+    ]);
+
+    if (existingOutputs.every(Boolean)) {
+      console.warn(
+        `[prepare-public-data] Source NDJSON introuvable (${path.relative(repoRoot, atlasPaths.sourceNdjson)}). Fichiers atlas existants conserves.`,
+      );
+      return;
+    }
+
     await writeJson(atlasPaths.outputSegments, { type: 'FeatureCollection', features: [] });
     await writeJson(atlasPaths.outputSummary, {
       generated_at: new Date().toISOString(),
