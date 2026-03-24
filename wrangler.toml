@@ -18,6 +18,6 @@ VITE_MAP_STYLE_SWISS_IMAGERY = "https://vectortiles.geo.admin.ch/styles/ch.swiss
 # The application now stores contributions in D1.
 [[d1_databases]]
 binding = "CONTRIBUTIONS_DB"
-database_name = "validation-cyclabilite-gg"
-database_id = "1e261f7b-a59c-41a5-bdd9-42ebad4ae417"
+database_name = "validation-cyclabilite-gg-v2"
+database_id = "de1ee4a4-42ab-45e0-b971-9149ee2eabef"
 migrations_dir = "migrations"
