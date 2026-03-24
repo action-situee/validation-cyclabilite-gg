@@ -11,7 +11,7 @@ import {
   Send,
 } from 'lucide-react';
 import type { ObservationLibre } from '../types';
-import { Button } from './ui/Button';
+import { Button } from './ui/button';
 import { INDICE_LABELS, OBS_LABELS } from '../config/palette';
 
 interface ObservationThreadProps {

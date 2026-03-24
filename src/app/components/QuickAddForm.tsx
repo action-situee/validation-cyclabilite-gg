@@ -7,7 +7,7 @@ import {
   ObservationLibre,
   ObservationMetricClass,
 } from '../types';
-import { Button } from './ui/Button';
+import { Button } from './ui/button';
 import { PhotoPicker } from './PhotoPicker';
 
 interface QuickAddFormProps {

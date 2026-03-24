@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { RefreshCcw } from 'lucide-react';
 import type { CommentaireGeneral, ObservationLibre, SurveyResponse } from '../types';
 import { contributionsApi } from '../utils/api';
-import { Button } from './ui/Button';
+import { Button } from './ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 
 type AdminTab = 'observations' | 'commentaires' | 'surveys';

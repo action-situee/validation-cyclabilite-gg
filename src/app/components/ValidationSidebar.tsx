@@ -11,7 +11,7 @@ import {
   ClipboardCheck,
 } from 'lucide-react';
 import type { CommentaireGeneral, Faisceau } from '../types';
-import { Button } from './ui/Button';
+import { Button } from './ui/button';
 
 interface ValidationSidebarProps {
   className?: string;

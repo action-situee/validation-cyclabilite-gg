@@ -4,7 +4,7 @@ import { Plus, X, Bike, HelpCircle, PanelLeft, PanelRight, PanelsLeftRight } fro
 import { AppDataProvider, useAppData } from './hooks/useAppData';
 import { Sidebar } from './components/Sidebar';
 import { ValidationSidebar } from './components/ValidationSidebar';
-import { Button } from './components/ui/Button';
+import { Button } from './components/ui/button';
 import type { BikeSegment, ObservationLibre, CommentaireGeneral } from './types';
 import { VALUE_THRESHOLDS, type BikeMetricKey } from './config/bikeMetrics';
 import { DEFAULT_BASEMAP, type BasemapMode } from './config/basemaps';
