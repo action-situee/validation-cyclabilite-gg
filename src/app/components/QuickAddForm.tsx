@@ -21,9 +21,7 @@ interface QuickAddFormProps {
 const RETURN_TYPES: { value: ObservationCategory; label: string }[] = [
   { value: 'securite_intersections', label: 'Sécurité intersections' },
   { value: 'giratoire', label: 'Giratoire' },
-  { value: 'maillage_alternative', label: 'Maillage et alternative' },
   { value: 'equipement', label: 'Équipement' },
-  { value: 'permeabilite_frontiere', label: 'Perméabilité de la frontière' },
   { value: 'bande_piste', label: 'Bande / piste' },
   { value: 'conflits_usage', label: 'Conflits d’usage' },
   { value: 'autre', label: 'Autre' },
@@ -38,9 +36,9 @@ const METRIC_CLASSES: { value: ObservationMetricClass; label: string }[] = [
 ];
 
 const INDICE_OPTIONS: { value: ObservationIndiceFeedback; label: string }[] = [
+  { value: 'sous_estime', label: 'Sous-estimé' },
   { value: 'adapte', label: 'Adapté' },
   { value: 'sur_estime', label: 'Sur-estimé' },
-  { value: 'sous_estime', label: 'Sous-estimé' },
 ];
 
 function ToggleGroup({
@@ -59,7 +57,7 @@ function ToggleGroup({
           key={option.value}
           type="button"
           onClick={() => onChange(option.value)}
-          className={`px-2.5 py-1.5 text-[10px] uppercase tracking-wider transition-all border-2 ${
+          className={`px-2 py-1 text-[9px] uppercase tracking-[0.08em] transition-all border ${
             value === option.value
               ? 'border-[#f72585] bg-[#fff0f6] text-[#0a0a0a]'
               : 'border-[#e0e0dc] text-[#5c5c5c] hover:border-[#0a0a0a]'
@@ -92,7 +90,7 @@ function MultiSelect({
           key={option.value}
           type="button"
           onClick={() => toggle(option.value)}
-          className={`px-2.5 py-1.5 text-[10px] uppercase tracking-wider transition-all border-2 ${
+          className={`px-2 py-1 text-[9px] uppercase tracking-[0.08em] transition-all border ${
             values.includes(option.value)
               ? 'border-[#2E6A4A] bg-[#D3E4D7] text-[#2E6A4A]'
               : 'border-[#e0e0dc] text-[#5c5c5c] hover:border-[#0a0a0a]'
@@ -106,7 +104,7 @@ function MultiSelect({
 }
 
 export function QuickAddForm({ latitude, longitude, segment, onSubmit, onClose }: QuickAddFormProps) {
-  const [categorie, setCategorie] = useState<ObservationCategory>('securite_intersections');
+  const [categoriesConcernees, setCategoriesConcernees] = useState<ObservationCategory[]>(['securite_intersections']);
   const [typeAutre, setTypeAutre] = useState('');
   const [classesConcernees, setClassesConcernees] = useState<ObservationMetricClass[]>([]);
   const [indiceJuge, setIndiceJuge] = useState<ObservationIndiceFeedback | ''>('');
@@ -115,7 +113,12 @@ export function QuickAddForm({ latitude, longitude, segment, onSubmit, onClose }
   const [organisation, setOrganisation] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
 
-  const canSubmit = commentaire.trim() && indiceJuge && (categorie !== 'autre' || typeAutre.trim());
+  const primaryCategory = categoriesConcernees[0] || 'autre';
+  const hasAutreCategory = categoriesConcernees.includes('autre');
+  const canSubmit = commentaire.trim() && indiceJuge && categoriesConcernees.length > 0 && (!hasAutreCategory || typeAutre.trim());
+  const sectionTitleClass = 'block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-2';
+  const inputClass = 'w-full px-3 py-2 border border-[#d0d4ce] bg-white focus:outline-none focus:border-[#2E6A4A] transition-colors text-[13px]';
+  const dividerClass = 'border-t border-[#ece9e4] pt-4';
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -127,8 +130,9 @@ export function QuickAddForm({ latitude, longitude, segment, onSubmit, onClose }
       latitude,
       longitude,
       commentaire: commentaire.trim(),
-      categorie,
-      type_autre: categorie === 'autre' ? typeAutre.trim() : undefined,
+      categorie: primaryCategory,
+      categories_concernees: categoriesConcernees,
+      type_autre: hasAutreCategory ? typeAutre.trim() : undefined,
       classes_concernees: classesConcernees,
       auteur: auteur.trim() || 'Anonyme',
       organisation: organisation.trim() || undefined,
@@ -149,7 +153,7 @@ export function QuickAddForm({ latitude, longitude, segment, onSubmit, onClose }
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-white border-2 border-[#0a0a0a] w-full max-w-lg shadow-[6px_6px_0_rgba(0,0,0,0.15)] max-h-[90vh] flex flex-col">
+      <div className="bg-white border-2 border-[#0a0a0a] w-full max-w-lg shadow-[6px_6px_0_rgba(0,0,0,0.15)] max-h-[90vh] flex flex-col overflow-hidden">
         <div className="p-4 border-b-2 border-[#0a0a0a] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <MapPin className="w-5 h-5 text-[#f72585] shrink-0" />
@@ -171,24 +175,47 @@ export function QuickAddForm({ latitude, longitude, segment, onSubmit, onClose }
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto flex-1">
-          {categorie === 'autre' && (
+        <form id="quick-add-form" onSubmit={handleSubmit} className="overflow-y-auto flex-1">
+          <div className="p-4 space-y-4 sm:space-y-5">
             <div>
-              <label className="block text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c] mb-1">
-                Préciser :
+              <label className={sectionTitleClass}>
+                L’indice vous semble
               </label>
-              <input
-                type="text"
-                value={typeAutre}
-                onChange={(event) => setTypeAutre(event.target.value)}
-                className="w-full px-3 py-2 border border-[#d0d4ce] bg-white focus:outline-none focus:border-[#f72585] transition-colors text-[13px]"
-                placeholder="Ex : stationnement, revêtement, signalisation..."
+              <ToggleGroup
+                options={INDICE_OPTIONS}
+                value={indiceJuge}
+                onChange={(value) => setIndiceJuge(value as ObservationIndiceFeedback)}
               />
             </div>
-          )}
 
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-2">
+            <div className={dividerClass}>
+              <label className={sectionTitleClass}>
+                Objet concerné
+              </label>
+              <MultiSelect
+                options={RETURN_TYPES}
+                values={categoriesConcernees}
+                onChange={(values) => setCategoriesConcernees(values as ObservationCategory[])}
+              />
+            </div>
+
+            {hasAutreCategory && (
+              <div className={dividerClass}>
+                <label className="block text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c] mb-1">
+                  Préciser
+                </label>
+                <input
+                  type="text"
+                  value={typeAutre}
+                  onChange={(event) => setTypeAutre(event.target.value)}
+                  className={inputClass}
+                  placeholder="Ex : stationnement, revêtement, signalisation..."
+                />
+              </div>
+            )}
+
+            <div className={dividerClass}>
+              <label className={sectionTitleClass}>
               Classe concernée
             </label>
             <MultiSelect
@@ -196,77 +223,60 @@ export function QuickAddForm({ latitude, longitude, segment, onSubmit, onClose }
               values={classesConcernees}
               onChange={(values) => setClassesConcernees(values as ObservationMetricClass[])}
             />
-          </div>
+            </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-2">
-              Objet concerné
-            </label>
-            <ToggleGroup
-              options={RETURN_TYPES}
-              value={categorie}
-              onChange={(value) => setCategorie(value as ObservationCategory)}
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-2">
-              L’indice vous semble
-            </label>
-            <ToggleGroup
-              options={INDICE_OPTIONS}
-              value={indiceJuge}
-              onChange={(value) => setIndiceJuge(value as ObservationIndiceFeedback)}
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-1">
+            <div className={dividerClass}>
+              <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-1">
               Commentaire / suggestion <span className="text-red-600">*</span>
             </label>
             <textarea
               value={commentaire}
               onChange={(event) => setCommentaire(event.target.value)}
-              className="w-full px-3 py-2 border border-[#d0d4ce] bg-white resize-none focus:outline-none focus:border-[#f72585] transition-colors text-[13px]"
+                className="w-full px-3 py-2 border border-[#d0d4ce] bg-white resize-none focus:outline-none focus:border-[#2E6A4A] transition-colors text-[13px]"
               rows={4}
               placeholder="Décrivez le problème, le point d’attention ou la suggestion d’amélioration..."
               required
               autoFocus
             />
-          </div>
+            </div>
 
-          <PhotoPicker photos={photos} onChange={setPhotos} />
+            <div className={dividerClass}>
+              <PhotoPicker photos={photos} onChange={setPhotos} />
+            </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-1">
+            <div className={`${dividerClass} grid grid-cols-1 gap-3 sm:grid-cols-2`}>
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-1">
                 Nom
-              </label>
-              <input
-                type="text"
-                value={auteur}
-                onChange={(event) => setAuteur(event.target.value)}
-                className="w-full px-3 py-2 border-2 border-[#0a0a0a] bg-white focus:outline-none focus:border-[#2E6A4A] transition-colors text-[13px]"
-                placeholder="Anonyme"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-1">
+                </label>
+                <input
+                  type="text"
+                  value={auteur}
+                  onChange={(event) => setAuteur(event.target.value)}
+                  className={inputClass}
+                  placeholder="Anonyme"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-1">
                 Entité
-              </label>
-              <input
-                type="text"
-                value={organisation}
-                onChange={(event) => setOrganisation(event.target.value)}
-                className="w-full px-3 py-2 border-2 border-[#0a0a0a] bg-white focus:outline-none focus:border-[#2E6A4A] transition-colors text-[13px]"
-                placeholder="Association, commune, service..."
-              />
+                </label>
+                <input
+                  type="text"
+                  value={organisation}
+                  onChange={(event) => setOrganisation(event.target.value)}
+                  className={inputClass}
+                  placeholder="Association, commune, service..."
+                />
+              </div>
             </div>
           </div>
 
-          <div className="flex gap-2 justify-end pt-2">
-            <Button variant="ghost" type="button" onClick={onClose}>Annuler</Button>
-            <Button variant="primary" type="submit" disabled={!canSubmit}>Enregistrer</Button>
+          <div className="sticky bottom-0 border-t border-[#ece9e4] bg-white/95 backdrop-blur px-4 py-3 shrink-0">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button className="w-full sm:w-auto" variant="ghost" size="sm" type="button" onClick={onClose}>Annuler</Button>
+              <Button className="w-full sm:w-auto" variant="primary" size="sm" form="quick-add-form" type="submit" disabled={!canSubmit}>Enregistrer</Button>
+            </div>
           </div>
         </form>
       </div>

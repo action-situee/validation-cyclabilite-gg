@@ -45,8 +45,8 @@ type CameraState = {
 
 type AnalysisScale = 'segment' | 'carreau200';
 
-const DEFAULT_CENTER: [number, number] = [6.16, 46.23];
-const DEFAULT_ZOOM = 11;
+const DEFAULT_CENTER: [number, number] = [6.1563, 46.1467];
+const DEFAULT_ZOOM = 10.45;
 const MAX_MAP_ZOOM = 18;
 const DEFAULT_BEARING = 0;
 const DEFAULT_PITCH = 0;
@@ -62,7 +62,15 @@ const DEFAULT_SWISS_IMAGERY_STYLE = 'https://vectortiles.geo.admin.ch/styles/ch.
 const DEFAULT_BIKE_SEGMENT_PMTILES = import.meta.env.PROD ? '/api/pmtiles/bike-segment' : '/tiles/bike_agglo_segment.pmtiles';
 const DEFAULT_BIKE_CARREAU200_PMTILES = import.meta.env.PROD ? '/api/pmtiles/bike-carreau200' : '/tiles/bike_agglo_carreau200.pmtiles';
 const DEFAULT_PERIMETER_PMTILES = import.meta.env.PROD ? '/api/pmtiles/perimeter' : '/tiles/canton_perimeter.pmtiles';
+const DEFAULT_CORRIDORS_PMTILES = import.meta.env.PROD
+  ? 'https://pub-23cee30d1f03450dbc03f60446ae3cf6.r2.dev/corridors.pmtiles'
+  : '/data/corridors/corridors.pmtiles';
+const DEFAULT_CORRIDORS_MASK_PMTILES = import.meta.env.PROD
+  ? 'https://pub-23cee30d1f03450dbc03f60446ae3cf6.r2.dev/corridors-mask.pmtiles'
+  : '/data/corridors/corridors-mask.pmtiles';
 const DEFAULT_PERIMETER_SOURCE_LAYER = 'canton_perimeter';
+const DEFAULT_CORRIDORS_SOURCE_LAYER = 'corridors';
+const DEFAULT_CORRIDORS_MASK_SOURCE_LAYER = 'corridors_mask';
 const SEGMENT_DETAIL_ZOOM = 11;
 const SCALE_BLEND_START = 10.7;
 const SCALE_BLEND_END = 11.2;
@@ -77,6 +85,10 @@ const PERIMETER_PM_TILES_URL = import.meta.env.PROD
   ? DEFAULT_PERIMETER_PMTILES
   : env.VITE_PM_TILES_PERIMETER || DEFAULT_PERIMETER_PMTILES;
 const PERIMETER_SOURCE_LAYER = env.VITE_PERIMETER_SOURCE_LAYER || DEFAULT_PERIMETER_SOURCE_LAYER;
+const CORRIDORS_PM_TILES_URL = env.VITE_PM_TILES_CORRIDORS || DEFAULT_CORRIDORS_PMTILES;
+const CORRIDORS_SOURCE_LAYER = env.VITE_CORRIDORS_SOURCE_LAYER || DEFAULT_CORRIDORS_SOURCE_LAYER;
+const CORRIDORS_MASK_PM_TILES_URL = env.VITE_PM_TILES_CORRIDORS_MASK || DEFAULT_CORRIDORS_MASK_PMTILES;
+const CORRIDORS_MASK_SOURCE_LAYER = env.VITE_CORRIDORS_MASK_SOURCE_LAYER || DEFAULT_CORRIDORS_MASK_SOURCE_LAYER;
 const SEGMENT_QUERY_RADII = [0, 18, 36, 72, 144];
 const MODUS_LOGO_URL = 'https://github.com/action-situee/assets/blob/main/images/modus-2025.png?raw=true';
 const GENEVE_LOGO_URL = 'https://raw.githubusercontent.com/action-situee/assets/380a38d67ffe6f8270cf52c0d9431d1f05f3b12e/images/Logo_Genf.svg';
@@ -193,20 +205,6 @@ function closeLngLatRingIfNeeded(ring: [number, number][]) {
   return [...ring, first];
 }
 
-type OverlayFaisceauPath = {
-  id: string;
-  path: string;
-  selected: boolean;
-  color: string;
-};
-
-type OverlayMaskState = {
-  width: number;
-  height: number;
-  maskPath: string;
-  faisceaux: OverlayFaisceauPath[];
-};
-
 function buildCiblesGeoJson(cibles: Cible[]) {
   return {
     type: 'FeatureCollection',
@@ -269,6 +267,87 @@ function buildObservationsGeoJson(observations: ObservationLibre[]) {
         },
       }];
     }),
+  };
+}
+
+function buildCorridorLabelsGeoJson(faisceaux: Faisceau[]) {
+  return {
+    type: 'FeatureCollection',
+    features: faisceaux.flatMap((faisceau) => {
+      if (!Array.isArray(faisceau.centerline) || faisceau.centerline.length < 2) {
+        return [];
+      }
+
+      const coordinates = faisceau.centerline
+        .map((pair) => normalizeLatLngOrLngLatToLngLat(pair))
+        .filter(Boolean) as [number, number][];
+
+      if (coordinates.length < 2) {
+        return [];
+      }
+
+      return [{
+        type: 'Feature',
+        properties: {
+          id: faisceau.id,
+          nom: faisceau.nom,
+        },
+        geometry: {
+          type: 'LineString',
+          coordinates,
+        },
+      }];
+    }),
+  };
+}
+
+function buildCorridorMaskGeoJson(
+  faisceaux: Faisceau[],
+  selectedFaisceau?: string | null,
+) {
+  const visibleFaisceaux = selectedFaisceau
+    ? faisceaux.filter((faisceau) => faisceau.id === selectedFaisceau)
+    : faisceaux;
+
+  const holeRings = visibleFaisceaux.flatMap((faisceau) => {
+    const coordinates = closeLngLatRingIfNeeded(
+      (faisceau.polygon || [])
+        .map((pair) => normalizeLatLngOrLngLatToLngLat(pair))
+        .filter(Boolean) as [number, number][],
+    );
+
+    return coordinates.length >= 4 ? [coordinates] : [];
+  });
+
+  if (holeRings.length === 0) {
+    return {
+      type: 'FeatureCollection',
+      features: [],
+    };
+  }
+
+  const [southWest, northEast] = TERRITORY_MAX_BOUNDS;
+  const outerRing: [number, number][] = [
+    [southWest[0] - 0.35, southWest[1] - 0.25],
+    [northEast[0] + 0.35, southWest[1] - 0.25],
+    [northEast[0] + 0.35, northEast[1] + 0.25],
+    [southWest[0] - 0.35, northEast[1] + 0.25],
+    [southWest[0] - 0.35, southWest[1] - 0.25],
+  ];
+
+  return {
+    type: 'FeatureCollection',
+    features: [{
+      type: 'Feature',
+      properties: {
+        id: selectedFaisceau || 'all',
+        kind: 'mask',
+      },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [outerRing, ...holeRings],
+      },
+    }],
   };
 }
 
@@ -735,6 +814,20 @@ function setPerimeterVisibility(map: maplibregl.Map, visible: boolean) {
   map.triggerRepaint();
 }
 
+function setCorridorVisibility(map: maplibregl.Map, visible: boolean) {
+  ['corridors-fill', 'corridors-outline', 'corridors-selected-outline', 'corridors-labels'].forEach((layerId) => {
+    setLayerVisibility(map, layerId, visible);
+  });
+  map.triggerRepaint();
+}
+
+function setCorridorMaskVisibility(map: maplibregl.Map, visible: boolean) {
+  ['corridor-mask-fill', 'corridor-mask-vector-fill', 'corridor-mask-edge'].forEach((layerId) => {
+    setLayerVisibility(map, layerId, visible);
+  });
+  map.triggerRepaint();
+}
+
 function reorderMapLayers(map: maplibregl.Map) {
   [
     'segments-layer',
@@ -753,6 +846,13 @@ function reorderMapLayers(map: maplibregl.Map) {
   [
     'perimeter-casing',
     'perimeter-outline',
+    'corridors-fill',
+    'corridor-mask-fill',
+    'corridor-mask-vector-fill',
+    'corridor-mask-edge',
+    'corridors-outline',
+    'corridors-selected-outline',
+    'corridors-labels',
   ].forEach((layerId) => moveLayerToTop(map, layerId));
 
   moveWaterLayersAboveCarreaux(map);
@@ -860,6 +960,8 @@ function MapInner({
   const showFaisceauxRef = useRef(Boolean(showFaisceaux));
   const carreauAvailableRef = useRef(Boolean(BIKE_CARREAU200_PM_TILES_URL));
   const perimeterAvailableRef = useRef(Boolean(PERIMETER_PM_TILES_URL));
+  const corridorTilesAvailableRef = useRef(Boolean(CORRIDORS_PM_TILES_URL));
+  const corridorMaskTilesAvailableRef = useRef(Boolean(CORRIDORS_MASK_PM_TILES_URL));
   const [mapError, setMapError] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const [displayScale, setDisplayScale] = useState<AnalysisScale>(
@@ -870,9 +972,10 @@ function MapInner({
   const [labelsAvailable, setLabelsAvailable] = useState(true);
   const [carreauAvailable, setCarreauAvailable] = useState(Boolean(BIKE_CARREAU200_PM_TILES_URL));
   const [perimeterAvailable, setPerimeterAvailable] = useState(Boolean(PERIMETER_PM_TILES_URL));
+  const [corridorTilesAvailable, setCorridorTilesAvailable] = useState(Boolean(CORRIDORS_PM_TILES_URL));
+  const [corridorMaskTilesAvailable, setCorridorMaskTilesAvailable] = useState(Boolean(CORRIDORS_MASK_PM_TILES_URL));
   const [cameraDebug, setCameraDebug] = useState<CameraState>(cameraStateRef.current);
   const [cursorDebug, setCursorDebug] = useState<{ lng: number; lat: number } | null>(null);
-  const [overlayMask, setOverlayMask] = useState<OverlayMaskState | null>(null);
 
   useEffect(() => {
     onCibleClickRef.current = onCibleClick;
@@ -958,6 +1061,14 @@ function MapInner({
     perimeterAvailableRef.current = perimeterAvailable;
   }, [perimeterAvailable]);
 
+  useEffect(() => {
+    corridorTilesAvailableRef.current = corridorTilesAvailable;
+  }, [corridorTilesAvailable]);
+
+  useEffect(() => {
+    corridorMaskTilesAvailableRef.current = corridorMaskTilesAvailable;
+  }, [corridorMaskTilesAvailable]);
+
   const syncCameraState = (map: maplibregl.Map) => {
     const center = map.getCenter();
     const nextState: CameraState = {
@@ -989,6 +1100,8 @@ function MapInner({
     applyTextLayerVisibility(map, showLabelsRef.current);
     hideSwissLightRouteNumberLayers(map, basemapRef.current);
     setPerimeterVisibility(map, showPerimeterRef.current && perimeterAvailableRef.current);
+    setCorridorVisibility(map, showFaisceauxRef.current && corridorTilesAvailableRef.current);
+    setCorridorMaskVisibility(map, showFaisceauxRef.current);
     reorderMapLayers(map);
   };
 
@@ -1307,6 +1420,188 @@ function MapInner({
       setPerimeterAvailable(false);
     }
 
+    if (CORRIDORS_PM_TILES_URL) {
+      try {
+        if (!map.getSource('corridors')) {
+          map.addSource('corridors', {
+            type: 'vector',
+            url: normalizePmtilesUrl(CORRIDORS_PM_TILES_URL),
+          });
+        }
+
+        if (!map.getLayer('corridors-fill')) {
+          map.addLayer({
+            id: 'corridors-fill',
+            type: 'fill',
+            source: 'corridors',
+            'source-layer': CORRIDORS_SOURCE_LAYER,
+            paint: {
+              'fill-color': ['coalesce', ['get', 'color'], '#2E6A4A'],
+              'fill-opacity': 0,
+            },
+            layout: {
+              visibility: showFaisceauxRef.current ? 'visible' : 'none',
+            },
+          });
+        }
+
+        if (!map.getLayer('corridors-outline')) {
+          map.addLayer({
+            id: 'corridors-outline',
+            type: 'line',
+            source: 'corridors',
+            'source-layer': CORRIDORS_SOURCE_LAYER,
+            paint: {
+              'line-color': '#8338ec',
+              'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.8, 8, 2.2, 10, 2.6, 12, 3.1, 14, 3.6],
+              'line-opacity': 0.72,
+            },
+            layout: {
+              'line-cap': 'round',
+              'line-join': 'round',
+              visibility: showFaisceauxRef.current ? 'visible' : 'none',
+            },
+          });
+        }
+
+        if (!map.getLayer('corridors-selected-outline')) {
+          map.addLayer({
+            id: 'corridors-selected-outline',
+            type: 'line',
+            source: 'corridors',
+            'source-layer': CORRIDORS_SOURCE_LAYER,
+            filter: ['==', ['get', 'id'], ''],
+            paint: {
+              'line-color': '#8338ec',
+              'line-width': ['interpolate', ['linear'], ['zoom'], 6, 3.2, 8, 3.8, 10, 4.5, 12, 5.3, 14, 6],
+              'line-opacity': 0.96,
+            },
+            layout: {
+              'line-cap': 'round',
+              'line-join': 'round',
+              visibility: showFaisceauxRef.current ? 'visible' : 'none',
+            },
+          });
+        }
+
+        setCorridorVisibility(map, showFaisceauxRef.current);
+        setCorridorTilesAvailable(true);
+      } catch {
+        setCorridorTilesAvailable(false);
+      }
+    } else {
+      setCorridorTilesAvailable(false);
+    }
+
+    if (CORRIDORS_MASK_PM_TILES_URL) {
+      try {
+        if (!map.getSource('corridor-mask-vector')) {
+          map.addSource('corridor-mask-vector', {
+            type: 'vector',
+            url: normalizePmtilesUrl(CORRIDORS_MASK_PM_TILES_URL),
+          });
+        }
+
+        if (!map.getLayer('corridor-mask-vector-fill')) {
+          map.addLayer({
+            id: 'corridor-mask-vector-fill',
+            type: 'fill',
+            source: 'corridor-mask-vector',
+            'source-layer': CORRIDORS_MASK_SOURCE_LAYER,
+            filter: ['==', ['get', 'id'], 'all'],
+            paint: {
+              'fill-color': '#ffffff',
+              'fill-opacity': 0,
+              'fill-antialias': true,
+            },
+            layout: {
+              visibility: showFaisceauxRef.current ? 'visible' : 'none',
+            },
+          });
+        }
+
+        setCorridorMaskTilesAvailable(true);
+      } catch {
+        setCorridorMaskTilesAvailable(false);
+      }
+    } else {
+      setCorridorMaskTilesAvailable(false);
+    }
+
+    if (!map.getSource('corridor-labels')) {
+      map.addSource('corridor-labels', {
+        type: 'geojson',
+        data: buildCorridorLabelsGeoJson(faisceauxRef.current) as any,
+      });
+    }
+
+    if (!map.getSource('corridor-mask')) {
+      map.addSource('corridor-mask', {
+        type: 'geojson',
+        data: buildCorridorMaskGeoJson(faisceauxRef.current, selectedFaisceauRef.current) as any,
+      });
+    }
+
+    if (!map.getLayer('corridor-mask-fill')) {
+      map.addLayer({
+        id: 'corridor-mask-fill',
+        type: 'fill',
+        source: 'corridor-mask',
+        paint: {
+          'fill-color': '#ffffff',
+          'fill-opacity': selectedFaisceauRef.current ? 0.8 : 0.6,
+          'fill-antialias': true,
+        },
+        layout: {
+          visibility: showFaisceauxRef.current ? 'visible' : 'none',
+        },
+      });
+    }
+
+    if (!map.getLayer('corridor-mask-edge')) {
+      map.addLayer({
+        id: 'corridor-mask-edge',
+        type: 'line',
+        source: 'corridor-labels',
+        paint: {
+          'line-color': '#ffffff',
+          'line-width': ['interpolate', ['linear'], ['zoom'], 6, 10, 8, 12, 10, 15, 12, 18, 14, 22],
+          'line-opacity': selectedFaisceauRef.current ? 0.34 : 0.28,
+        },
+        layout: {
+          'line-cap': 'round',
+          'line-join': 'round',
+          visibility: showFaisceauxRef.current ? 'visible' : 'none',
+        },
+      });
+    }
+
+    if (!map.getLayer('corridors-labels')) {
+      map.addLayer({
+        id: 'corridors-labels',
+        type: 'symbol',
+        source: 'corridor-labels',
+        layout: {
+          'symbol-placement': 'line',
+          'text-field': ['get', 'nom'],
+          'text-size': ['interpolate', ['linear'], ['zoom'], 8, 9, 10, 10, 12, 11, 14, 12],
+          'text-font': ['Open Sans Regular'],
+          'symbol-spacing': 500,
+          'text-letter-spacing': 0.08,
+          'text-max-angle': 20,
+          'text-rotation-alignment': 'map',
+          visibility: showFaisceauxRef.current ? 'visible' : 'none',
+        },
+        paint: {
+          'text-color': '#8338ec',
+          'text-opacity': 0.82,
+          'text-halo-color': 'rgba(255,255,255,0.94)',
+          'text-halo-width': 1.2,
+          'text-halo-blur': 0.4,
+        },
+      });
+    }
+
     syncStyleDecorations(map);
     applyScaleVisibility(map);
   };
@@ -1330,6 +1625,8 @@ function MapInner({
       ensurePmtilesArchive(BIKE_PM_TILES_URL);
       ensurePmtilesArchive(BIKE_CARREAU200_PM_TILES_URL);
       ensurePmtilesArchive(PERIMETER_PM_TILES_URL);
+      ensurePmtilesArchive(CORRIDORS_PM_TILES_URL);
+      ensurePmtilesArchive(CORRIDORS_MASK_PM_TILES_URL);
 
       const map = new maplibregl.Map({
         container: containerRef.current,
@@ -1548,6 +1845,16 @@ function MapInner({
           return;
         }
 
+        if (message.includes('corridors-mask')) {
+          setCorridorMaskTilesAvailable(false);
+          return;
+        }
+
+        if (message.includes('corridors') || message.includes('corridor')) {
+          setCorridorTilesAvailable(false);
+          return;
+        }
+
         if (message.includes('carreau200') || message.includes('bike_agglo_carreau200')) {
           setCarreauAvailable(false);
           displayScaleRef.current = 'segment';
@@ -1684,8 +1991,59 @@ function MapInner({
 
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
-    // Faisceaux are rendered via SVG overlay, not as MapLibre GeoJSON layers.
-  }, [mapReady, faisceaux]);
+    setSourceData(mapRef.current, 'corridor-labels', buildCorridorLabelsGeoJson(faisceaux));
+    if (!corridorMaskTilesAvailable) {
+      setSourceData(mapRef.current, 'corridor-mask', buildCorridorMaskGeoJson(faisceaux, selectedFaisceau));
+    }
+    reorderMapLayers(mapRef.current);
+  }, [mapReady, faisceaux, selectedFaisceau, corridorMaskTilesAvailable]);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+    const map = mapRef.current;
+    if (!map.getLayer('corridors-outline') || !map.getLayer('corridors-selected-outline')) return;
+    const useVectorMask = Boolean(corridorMaskTilesAvailable);
+
+    map.setFilter(
+      'corridors-outline',
+      selectedFaisceau
+        ? ['!=', ['get', 'id'], selectedFaisceau]
+        : ['has', 'id'],
+    );
+    map.setPaintProperty('corridors-outline', 'line-opacity', selectedFaisceau ? 0.44 : 0.72);
+    map.setPaintProperty('corridors-fill', 'fill-opacity', 0);
+    setLayerVisibility(map, 'corridor-mask-fill', showFaisceaux && !useVectorMask);
+    map.setPaintProperty(
+      'corridor-mask-fill',
+      'fill-opacity',
+      selectedFaisceau ? 0.8 : 0.6,
+    );
+    if (map.getLayer('corridor-mask-vector-fill')) {
+      setLayerVisibility(map, 'corridor-mask-vector-fill', showFaisceaux && useVectorMask);
+      map.setFilter(
+        'corridor-mask-vector-fill',
+        useVectorMask
+          ? ['==', ['get', 'id'], selectedFaisceau || 'all']
+          : ['==', ['get', 'id'], ''],
+      );
+      map.setPaintProperty(
+        'corridor-mask-vector-fill',
+        'fill-opacity',
+        useVectorMask ? (selectedFaisceau ? 0.8 : 0.6) : 0,
+      );
+    }
+    map.setPaintProperty('corridor-mask-edge', 'line-opacity', selectedFaisceau ? 0.34 : 0.28);
+    map.setFilter(
+      'corridors-selected-outline',
+      selectedFaisceau
+        ? ['==', ['get', 'id'], selectedFaisceau]
+        : ['==', ['get', 'id'], ''],
+    );
+    setCorridorVisibility(map, showFaisceaux && corridorTilesAvailable);
+    setCorridorMaskVisibility(map, showFaisceaux);
+    setLayerVisibility(map, 'corridor-mask-edge', showFaisceaux);
+    reorderMapLayers(map);
+  }, [mapReady, selectedFaisceau, showFaisceaux, corridorTilesAvailable, corridorMaskTilesAvailable]);
 
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
@@ -1793,8 +2151,6 @@ function MapInner({
     reorderMapLayers(mapRef.current);
   }, [mapReady, displayScale, addMode, carreauAvailable]);
 
-  // Faisceaux are rendered via SVG overlay (see below).
-
   useEffect(() => {
     if (!mapReady || !mapRef.current || !flyTo) return;
     mapRef.current.flyTo({
@@ -1827,82 +2183,6 @@ function MapInner({
     setPerimeterVisibility(mapRef.current, showPerimeter && perimeterAvailable);
     reorderMapLayers(mapRef.current);
   }, [mapReady, showPerimeter, perimeterAvailable]);
-
-  // Fallback: render faisceau polygons as an SVG overlay.
-  // This is needed because GeoJSON layers are not rendering in the current MapLibre setup,
-  // while vector-tile layers do render.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!mapReady || !map || !showFaisceaux) {
-      setOverlayMask(null);
-      return;
-    }
-
-    const buildOverlay = () => {
-      const next: OverlayFaisceauPath[] = [];
-      faisceaux.forEach((faisceau) => {
-        const ringLngLat = closeLngLatRingIfNeeded(
-          (faisceau.polygon || [])
-            .map((pair) => normalizeLatLngOrLngLatToLngLat(pair))
-            .filter(Boolean) as [number, number][],
-        );
-        if (ringLngLat.length < 4) return;
-
-        const projected = ringLngLat.map(([lng, lat]) => map.project([lng, lat]));
-        if (projected.length < 3) return;
-
-        const d = [
-          `M ${projected[0].x.toFixed(1)} ${projected[0].y.toFixed(1)}`,
-          ...projected.slice(1).map((p) => `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`),
-          'Z',
-        ].join(' ');
-
-        next.push({
-          id: faisceau.id,
-          path: d,
-          selected: Boolean(selectedFaisceau) && faisceau.id === selectedFaisceau,
-          color: faisceau.color,
-        });
-      });
-
-      const canvas = map.getCanvas();
-      const width = Math.max(canvas.clientWidth || canvas.width || 0, 1);
-      const height = Math.max(canvas.clientHeight || canvas.height || 0, 1);
-      const visibleIds = new Set(
-        (selectedFaisceau ? [selectedFaisceau] : next.map((item) => item.id)).filter(Boolean),
-      );
-      const maskPath = [
-        `M 0 0 H ${width.toFixed(1)} V ${height.toFixed(1)} H 0 Z`,
-        ...next.filter((item) => visibleIds.has(item.id)).map((item) => item.path),
-      ].join(' ');
-
-      setOverlayMask(
-        next.length > 0
-          ? {
-              width,
-              height,
-              maskPath,
-              faisceaux: next,
-            }
-          : null,
-      );
-    };
-
-    buildOverlay();
-    map.on('move', buildOverlay);
-    map.on('zoom', buildOverlay);
-    map.on('rotate', buildOverlay);
-    map.on('pitch', buildOverlay);
-    map.on('resize', buildOverlay);
-
-    return () => {
-      map.off('move', buildOverlay);
-      map.off('zoom', buildOverlay);
-      map.off('rotate', buildOverlay);
-      map.off('pitch', buildOverlay);
-      map.off('resize', buildOverlay);
-    };
-  }, [mapReady, showFaisceaux, faisceaux, selectedFaisceau]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -2004,35 +2284,6 @@ function MapInner({
   return (
     <div className="w-full h-full relative">
       <div ref={containerRef} className="w-full h-full" />
-
-      {overlayMask && (
-        <svg
-          className="absolute inset-0 pointer-events-none"
-          style={{ zIndex: 4 }}
-          width="100%"
-          height="100%"
-          viewBox={`0 0 ${overlayMask.width} ${overlayMask.height}`}
-          preserveAspectRatio="none"
-        >
-          <path
-            d={overlayMask.maskPath}
-            fill="#111111"
-            fillRule="evenodd"
-            opacity={selectedFaisceau ? 0.44 : 0.3}
-          />
-          {overlayMask.faisceaux.map((item) => (
-            <path
-              key={item.id}
-              d={item.path}
-              fill="none"
-              stroke={item.selected ? item.color : '#4b5563'}
-              strokeWidth={item.selected ? 3.6 : 2.4}
-              strokeDasharray={item.selected ? undefined : '8 6'}
-              opacity={item.selected || !selectedFaisceau ? 0.96 : 0.66}
-            />
-          ))}
-        </svg>
-      )}
 
       <div className="absolute z-10 pointer-events-none" style={{ top: 16, left: 16 }}>
         <div

@@ -55,7 +55,7 @@ function LikertQuestion({
         {title}
       </legend>
       <div className="space-y-1.5">
-        <div className="flex items-center justify-between px-1">
+        <div className="mx-auto grid max-w-[240px] grid-cols-5 gap-1 px-1">
           {options.map((option) => (
             <label key={option.value} className="cursor-pointer">
               <input
@@ -67,7 +67,7 @@ function LikertQuestion({
                 className="sr-only"
               />
               <span
-                className={`inline-flex w-8 h-8 items-center justify-center rounded-full transition-all text-[13px] font-mono ${
+                className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-all text-[13px] font-mono ${
                   value === option.value
                     ? 'bg-[#2E6A4A] text-[#D3E4D7]'
                     : 'text-[#5c5c5c] hover:bg-[#e9efe9]'

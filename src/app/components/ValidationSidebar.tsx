@@ -1,11 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import {
-  CheckCircle2,
-  Send,
+  FileText,
   Trash2,
-  ChevronDown,
   ChevronUp,
-  MapPin,
   Layers,
   Pencil,
   ClipboardCheck,
@@ -19,10 +16,10 @@ interface ValidationSidebarProps {
   onFaisceauChange: (faisceauId: string | null) => void;
   faisceaux: Faisceau[];
   onOpenSurvey: () => void;
+  onOpenHelp: () => void;
   showFaisceaux: boolean;
   onToggleFaisceaux: () => void;
   commentaires: CommentaireGeneral[];
-  onAddCommentaire: (com: CommentaireGeneral) => void;
   onUpdateCommentaire: (com: CommentaireGeneral) => void;
   onDeleteCommentaire: (id: string) => void;
   observationsCount: number;
@@ -43,10 +40,10 @@ export function ValidationSidebar({
   onFaisceauChange,
   faisceaux,
   onOpenSurvey,
+  onOpenHelp,
   showFaisceaux,
   onToggleFaisceaux,
   commentaires,
-  onAddCommentaire,
   onUpdateCommentaire,
   onDeleteCommentaire,
   observationsCount,
@@ -54,8 +51,6 @@ export function ValidationSidebar({
   onExportCSV,
   isOwnCommentaire,
 }: ValidationSidebarProps) {
-  const [newComment, setNewComment] = useState('');
-  const [showSequence, setShowSequence] = useState(true);
   const [showComments, setShowComments] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
@@ -63,28 +58,13 @@ export function ValidationSidebar({
   const sectionTitleClass = 'text-[11px] uppercase tracking-[0.12em] text-[#1f2b24] mb-3 font-extrabold';
   const bodyTextClass = 'text-[11px] text-[#4d5853] leading-relaxed';
   const fieldClass = 'w-full px-3 py-2 border border-[#c9d0cc] bg-white text-[12px] resize-none focus:outline-none focus:border-[#2E6A4A] transition-colors';
+  const showFaisceauxToggle = false;
 
   const filteredComments = useMemo(() => (
     selectedFaisceau
       ? commentaires.filter((commentaire) => !commentaire.faisceau_id || commentaire.faisceau_id === selectedFaisceau)
       : commentaires
   ), [commentaires, selectedFaisceau]);
-
-  const handleSubmitComment = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!newComment.trim()) return;
-
-    const now = new Date();
-    onAddCommentaire({
-      id: '',
-      auteur: 'Anonyme',
-      texte: newComment.trim(),
-      date: now.toISOString().slice(0, 10),
-      heure: now.toTimeString().slice(0, 8),
-      faisceau_id: selectedFaisceau || undefined,
-    });
-    setNewComment('');
-  };
 
   const handleSaveEdit = (commentaire: CommentaireGeneral) => {
     if (!editingText.trim()) return;
@@ -104,56 +84,28 @@ export function ValidationSidebar({
       <div className="p-5 border-b-2 border-[#0a0a0a] bg-[#2E6A4A]">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 border-2 border-[#D3E4D7] flex items-center justify-center">
-            <CheckCircle2 className="w-5 h-5 text-[#D3E4D7]" />
+            <FileText className="w-5 h-5 text-[#D3E4D7]" />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="text-[#D3E4D7] text-sm uppercase tracking-[0.15em]">Contribution</h1>
             <p className="text-[#8AA894] text-[10px] uppercase tracking-[0.1em]">Remontees & commentaires</p>
           </div>
+          <button
+            type="button"
+            onClick={onOpenHelp}
+            className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#D3E4D7] bg-transparent text-[11px] font-semibold text-[#D3E4D7] hover:bg-[#D3E4D7] hover:text-[#2E6A4A] transition-colors"
+            aria-label="Consignes"
+            title="Consignes"
+          >
+            ?
+          </button>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto bg-[rgba(229,238,230,0.66)]">
-        {/* Sequence steps */}
-        <div className="p-4 border-b border-[#dfe3df] bg-[#D3E4D7]">
-          <button
-            onClick={() => setShowSequence((previous) => !previous)}
-            className="w-full flex items-center justify-between"
-          >
-            <p className="text-[9px] uppercase tracking-[0.15em] text-[#999]">Séquence de contribution</p>
-            {showSequence ? <ChevronUp className="w-4 h-4 text-[#999]" /> : <ChevronDown className="w-4 h-4 text-[#999]" />}
-          </button>
-
-          {showSequence && (
-            <div className="space-y-2 mt-3">
-              {[
-                { n: '1', label: 'Remplir le questionnaire general', sub: 'Section Questionnaire ci-dessous' },
-                { n: '2', label: 'Choisir un faisceau', sub: 'Selecteur ci-dessous' },
-                { n: '3', label: 'Poser des points sur la carte', sub: 'Bouton Ajouter en haut a droite de la carte' },
-                { n: '4', label: 'Laisser un commentaire general', sub: 'Section Commentaires ci-dessous' },
-              ].map(({ n, label, sub }, index, steps) => (
-                <React.Fragment key={n}>
-                  <div className="flex items-start gap-2.5">
-                    <span className="shrink-0 w-5 h-5 flex items-center justify-center bg-[#2E6A4A] text-[#D3E4D7] text-[9px] font-mono font-bold">{n}</span>
-                    <div>
-                      <p className="text-[11px] text-[#0a0a0a] font-semibold leading-tight">{label}</p>
-                      <p className="text-[10px] text-[#999]">{sub}</p>
-                    </div>
-                  </div>
-                  {index < steps.length - 1 && (
-                    <div className="pl-[2px]">
-                      <ChevronDown className="w-3.5 h-3.5 text-[#2E6A4A]" />
-                    </div>
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-          )}
-        </div>
-
         <div className={sectionClass}>
           <h3 className={sectionTitleClass}>
-            Etape 1 · Questionnaire general
+            Etape 1 · Repondre au questionnaire
           </h3>
           <p className={`${bodyTextClass} mb-3`}>
             Donnez votre avis global sur l&apos;indice et proposez vos suggestions.
@@ -163,88 +115,78 @@ export function ValidationSidebar({
             className="w-full flex items-center justify-center gap-2 px-2.5 py-2 border border-[#2E6A4A] bg-white text-[#2E6A4A] hover:bg-[#2E6A4A] hover:text-[#D3E4D7] transition-all text-[10px] uppercase tracking-[0.1em]"
           >
             <ClipboardCheck className="w-3.5 h-3.5" />
-            Repondre au questionnaire
+            Questionnaire general
           </button>
         </div>
 
         <div className={sectionClass}>
           <h3 className={sectionTitleClass}>
-            Etape 2 · Faisceau transfrontalier
+            Etape 2 · Choisir un faisceau transfrontalier
           </h3>
-
-          <label className="flex items-center gap-2 text-[10px] uppercase tracking-[0.12em] text-[#4d5853] mb-2">
-            <MapPin className="w-3.5 h-3.5 text-[#2E6A4A]" />
-            Focus carte
-          </label>
-          <div className="relative">
-            <select
-              value={selectedFaisceau || ''}
-              onChange={(event) => onFaisceauChange(event.target.value || null)}
-              className="w-full px-3 py-2 pr-9 border border-[#c9d0cc] bg-white text-[13px] focus:outline-none focus:border-[#2E6A4A] transition-colors appearance-none"
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => onFaisceauChange(selectedFaisceau === 'thonex_gaillard' ? null : 'thonex_gaillard')}
+              className={`flex items-center justify-center px-2.5 py-2 border transition-all text-[10px] uppercase tracking-[0.1em] ${
+                selectedFaisceau === 'thonex_gaillard'
+                  ? 'border-[#2E6A4A] bg-[#2E6A4A] text-[#D3E4D7]'
+                  : 'border-[#2E6A4A] bg-white text-[#2E6A4A] hover:bg-[#2E6A4A] hover:text-[#D3E4D7]'
+              }`}
             >
-              <option value="">Vue d&apos;ensemble</option>
-              {faisceaux.map((faisceau) => (
-                <option key={faisceau.id} value={faisceau.id}>
-                  {faisceau.nom}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5c5c5c] pointer-events-none" />
+              Gaillard-Eaux-Vives
+            </button>
+            <button
+              type="button"
+              onClick={() => onFaisceauChange(selectedFaisceau === 'plo_stjulien' ? null : 'plo_stjulien')}
+              className={`flex items-center justify-center px-2.5 py-2 border transition-all text-[10px] uppercase tracking-[0.1em] ${
+                selectedFaisceau === 'plo_stjulien'
+                  ? 'border-[#2E6A4A] bg-[#2E6A4A] text-[#D3E4D7]'
+                  : 'border-[#2E6A4A] bg-white text-[#2E6A4A] hover:bg-[#2E6A4A] hover:text-[#D3E4D7]'
+              }`}
+            >
+              Saint-Julien-Carouge
+            </button>
           </div>
 
-          <button
-            onClick={onToggleFaisceaux}
-            className={`mt-2.5 flex items-center gap-2 text-[10px] uppercase tracking-[0.1em] px-2 py-1.5 w-full border transition-all ${
-              showFaisceaux
-                ? 'border-[#2E6A4A] text-[#2E6A4A] bg-[#D3E4D7]'
-                : 'border-[#e0e0dc] text-[#999] bg-transparent'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span className="flex-1 text-left">Delimitations des faisceaux</span>
-          </button>
+          {showFaisceauxToggle && (
+            <button
+              onClick={onToggleFaisceaux}
+              className={`mt-2.5 flex items-center gap-2 text-[10px] uppercase tracking-[0.1em] px-2 py-1.5 w-full border transition-all ${
+                showFaisceaux
+                  ? 'border-[#2E6A4A] text-[#2E6A4A] bg-[#D3E4D7]'
+                  : 'border-[#e0e0dc] text-[#999] bg-transparent'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span className="flex-1 text-left">Delimitations des faisceaux</span>
+            </button>
+          )}
         </div>
 
         <div className={sectionClass}>
           <div className={sectionTitleClass}>
-            Etape 3 · Contributions localisees sur la carte
+            Etape 3 · Commentaire géolocalisé
           </div>
           <p className={bodyTextClass}>
             Ajoutez directement des points sur la carte. Cliquez sur + Ajouter pour creer un point. Appuyez sur un point existant pour lire la discussion, voter ou y ajouter un commentaire.
           </p>
         </div>
 
-        <div className={sectionClass}>
+        <div className="px-4 py-3 border-t border-[#e6ebe7] bg-[rgba(240,244,240,0.92)]">
           <button
             onClick={() => setShowComments(!showComments)}
-            className="flex items-center justify-between w-full mb-3"
+            className="flex items-center justify-between w-full"
           >
-            <span className="text-[11px] uppercase tracking-[0.12em] text-[#1f2b24] font-extrabold">
-              Etape 4 · Commentaires
+            <span className="text-[10px] uppercase tracking-[0.14em] text-[#5f6a64] font-semibold">
+              Commentaires laissés
             </span>
             {showComments ? <ChevronUp className="w-4 h-4 text-[#999]" /> : <ChevronDown className="w-4 h-4 text-[#999]" />}
           </button>
 
           {showComments && (
-            <>
-              <form onSubmit={handleSubmitComment} className="mb-4 space-y-2">
-                <textarea
-                  value={newComment}
-                  onChange={(event) => setNewComment(event.target.value)}
-                  placeholder="Commentaire ou suggestion generale..."
-                  className={fieldClass}
-                  rows={3}
-                />
-                <div className="flex justify-end">
-                  <Button variant="primary" size="sm" type="submit" disabled={!newComment.trim()}>
-                    <Send className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </form>
-
-              <div className="space-y-2">
+            <div className="mt-3 space-y-2">
                 {filteredComments.length === 0 && (
-                  <p className="text-[11px] text-[#999] text-center py-3 border border-dashed border-[#e0e0dc]">
+                  <p className="text-[10px] text-[#8b938d] text-center py-3 border border-dashed border-[#d9dfdb] bg-white/60">
                     Aucun commentaire
                   </p>
                 )}
@@ -256,7 +198,7 @@ export function ValidationSidebar({
                   return (
                     <div
                       key={commentaire.id}
-                      className="border border-[#d5dbd7] bg-white p-3 group relative hover:border-[#2E6A4A] transition-colors"
+                      className="border border-[#dde3de] bg-white/80 p-2.5 group relative hover:border-[#b7c6bc] transition-colors"
                     >
                       {isEditing ? (
                         <div className="space-y-2">
@@ -277,9 +219,9 @@ export function ValidationSidebar({
                         </div>
                       ) : (
                         <>
-                          <p className="text-[12px] text-[#0a0a0a] mb-1.5 leading-relaxed">{commentaire.texte}</p>
+                          <p className="text-[11px] text-[#243029] mb-1 leading-relaxed">{commentaire.texte}</p>
                           <div className="flex items-center justify-between gap-3">
-                            <span className="text-[10px] text-[#999] font-mono">
+                            <span className="text-[9px] text-[#8b938d] font-mono">
                               {formatCommentTimestamp(commentaire)}
                             </span>
                             {isOwn && (
@@ -310,7 +252,6 @@ export function ValidationSidebar({
                   );
                 })}
               </div>
-            </>
           )}
         </div>
 
@@ -319,7 +260,7 @@ export function ValidationSidebar({
       <div className="border-t border-[#d5dbd7] bg-white grid grid-cols-2 shrink-0">
         <div className="border-r border-[#d5dbd7] p-3 text-center">
           <div className="text-2xl text-[#2E6A4A] font-mono">{observationsCount}</div>
-          <div className="text-[10px] uppercase tracking-[0.12em] text-[#4d5853]">Remontees</div>
+          <div className="text-[10px] uppercase tracking-[0.12em] text-[#4d5853]">Points localises</div>
         </div>
         <div className="p-3 text-center">
           <div className="text-2xl text-[#2E6A4A] font-mono">{commentaires.length}</div>

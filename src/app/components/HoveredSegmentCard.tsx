@@ -41,8 +41,8 @@ export function HoveredSegmentCard({
     : null;
   const emptyStateLabel = 'Survolez la carte';
   const emptyStateHint = isCarreau
-    ? 'Survolez un carreau ou un segment pour lire son profil et choisir la classe affichee sur la carte.'
-    : 'Survolez un segment pour lire son profil et choisir la classe affichee sur la carte.';
+    ? 'Survolez un carreau ou zoomez davantage pour voir un segment detaille. Vous pouvez aussi cliquer sur une classe ci-dessous pour recolorer la carte selon cet indicateur.'
+    : 'Survolez un segment pour lire ses scores. Vous pouvez aussi cliquer sur une classe ci-dessous pour recolorer la carte selon cet indicateur.';
 
   const handleClassClick = (classKey: BikeMetricKey) => {
     onMetricChange(classKey === selectedMetric ? 'bike_index' : classKey);

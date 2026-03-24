@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useState, useMemo, useCallback, useEffect } from 'react';
 import { Toaster, toast } from 'sonner';
-import { Plus, X, Bike, HelpCircle, PanelLeft, PanelRight, PanelsLeftRight } from 'lucide-react';
+import { Plus, X, Bike, PanelLeft, PanelRight, PanelsLeftRight } from 'lucide-react';
 import { AppDataProvider, useAppData } from './hooks/useAppData';
 import { Sidebar } from './components/Sidebar';
 import { ValidationSidebar } from './components/ValidationSidebar';
@@ -11,6 +11,9 @@ import { DEFAULT_BASEMAP, type BasemapMode } from './config/basemaps';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from './mock-data/faisceaux';
 import { exportGeoJSON, exportCSV } from './utils/export';
 import { getFingerprint } from './utils/fingerprint';
+
+const HELP_MODAL_DISMISSED_KEY = 'validation-cyclabilite-help-dismissed';
+const SITUEE_LOGO_URL = 'https://raw.githubusercontent.com/action-situee/assets/refs/heads/main/images/Fichier_36-5.svg';
 
 const Map = lazy(() =>
   import('./components/Map').then((module) => ({ default: module.Map })),
@@ -90,6 +93,12 @@ function AppInner() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.localStorage.getItem(HELP_MODAL_DISMISSED_KEY) === 'true') return;
+    setShowHelp(true);
   }, []);
 
   const filteredObservations = useMemo(() => {
@@ -292,6 +301,13 @@ function AppInner() {
     setAddMode(true);
   }, [addMode, selectedSegment]);
 
+  const handleDismissHelpPermanently = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(HELP_MODAL_DISMISSED_KEY, 'true');
+    }
+    setShowHelp(false);
+  }, []);
+
   const rightSidebarProps = {
     selectedMetric,
     onMetricChange: setSelectedMetric,
@@ -305,10 +321,10 @@ function AppInner() {
     onFaisceauChange: handleFaisceauChange,
     faisceaux,
     onOpenSurvey: () => setShowSurvey(true),
+    onOpenHelp: () => setShowHelp(true),
     showFaisceaux,
     onToggleFaisceaux: () => setShowFaisceaux((value) => !value),
     commentaires,
-    onAddCommentaire: handleAddCommentaire,
     onUpdateCommentaire: handleUpdateCommentaire,
     onDeleteCommentaire: handleDeleteCommentaire,
     observationsCount: filteredObservations.length,
@@ -347,20 +363,29 @@ function AppInner() {
       <div className="bg-white border-b-2 border-[#0a0a0a] px-3 py-2.5 sm:px-4 z-20 shrink-0">
         <div className="grid grid-cols-[auto_1fr] items-start gap-x-3 gap-y-2 sm:grid-cols-[auto_1fr_auto] sm:items-center">
           <div className="flex items-center gap-4 min-w-0 shrink-0">
-            <button
-              onClick={() => setShowHelp(true)}
-              className="p-1.5 sm:p-2 border-2 border-transparent hover:border-[#0a0a0a] transition-all"
-              aria-label="Mode d'emploi"
-              title="Mode d'emploi"
+            <a
+              href="https://situee.ch"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center"
+              aria-label="Situee"
+              title="Situee"
             >
-              <HelpCircle className="w-5 h-5 text-[#2E6A4A]" />
-            </button>
+              <img src={SITUEE_LOGO_URL} alt="Situee" className="h-6 w-auto" />
+            </a>
             <a
               href="#/admin"
               className="inline-flex items-center justify-center border-2 border-[#0a0a0a] bg-white px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] hover:bg-[#f3f6f3]"
             >
               Admin
             </a>
+            <button
+              type="button"
+              onClick={() => setShowHelp(true)}
+              className="inline-flex items-center justify-center border-2 border-[#0a0a0a] bg-white px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] hover:bg-[#f3f6f3]"
+            >
+              Consignes
+            </button>
           </div>
 
           <div className="min-w-0 sm:px-4 sm:text-center">
@@ -404,7 +429,7 @@ function AppInner() {
       {/* Bandeau mode ajout */}
       {addMode && (
         <div className="bg-[#2E6A4A] text-[#D3E4D7] px-4 py-2 text-[11px] uppercase tracking-[0.15em] text-center shrink-0 z-10 border-b-2 border-[#0a0a0a]">
-          Cliquez sur la carte pour ajouter un point rattache au troncon visible le plus proche
+          Cliquez sur la carte pour ajouter un point et commenter
         </div>
       )}
 
@@ -426,7 +451,7 @@ function AppInner() {
               className={`${shouldPulseAddButton && !addMode ? 'animate-pulse' : ''} !bg-white text-[13px] font-bold uppercase tracking-[0.08em] px-4 py-3 border-2 border-[#0a0a0a] shadow-[0_4px_14px_rgba(10,10,10,0.22)]`}
             >
               {addMode ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-              <span>{addMode ? 'Annuler' : 'Ajouter'}</span>
+              <span>{addMode ? 'Annuler' : 'Ajouter une observation'}</span>
             </Button>
           </div>
 
@@ -539,16 +564,16 @@ function AppInner() {
         </Suspense>
       )}
 
-      {/* Modal Mode d'emploi */}
+      {/* Modal Consignes */}
       {showHelp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowHelp(false)} />
-          <div className="relative bg-white border-2 border-[#0a0a0a] max-w-lg w-full mx-4 max-h-[85vh] overflow-y-auto" style={{ boxShadow: '8px 8px 0 rgba(0,0,0,0.15)' }}>
+          <div className="relative bg-white border-2 border-[#0a0a0a] max-w-xl w-full max-h-[85vh] overflow-y-auto" style={{ boxShadow: '8px 8px 0 rgba(0,0,0,0.15)' }}>
             {/* Header */}
             <div className="bg-[#2E6A4A] p-5 border-b-2 border-[#0a0a0a] flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Bike className="w-5 h-5 text-[#D3E4D7]" />
-                <h2 className="text-[#D3E4D7] text-sm uppercase tracking-[0.15em]">Mode d'emploi</h2>
+                <h2 className="text-[#D3E4D7] text-sm uppercase tracking-[0.15em]">Consignes</h2>
               </div>
               <button onClick={() => setShowHelp(false)} className="p-1 hover:bg-[#2E6A4A] transition-colors">
                 <X className="w-5 h-5 text-[#D3E4D7]" />
@@ -557,47 +582,49 @@ function AppInner() {
 
             {/* Content */}
             <div className="p-6 space-y-5">
-              {/* Intro */}
-              <p className="text-[12px] text-[#5c5c5c] leading-relaxed">
-                Cette interface permet de visualiser et commenter l&apos;indice de cyclabilite sur <strong className="text-[#2E6A4A]">deux faisceaux transfrontaliers du Grand Geneve</strong>. Suivez les 4 etapes ci-dessous pour contribuer. Merci pour votre participation !
-              </p>
-
-              {/* Séquence */}
-              <div className="border-2 border-[#2E6A4A] bg-white p-4 space-y-3" style={{ boxShadow: '4px 4px 0 rgba(0,0,0,0.08)' }}>
-                <h3 className="text-[11px] uppercase tracking-[0.12em] text-[#2E6A4A]">Sequence de contribution</h3>
+              <div className="border-2 border-[#0a0a0a] bg-white p-4 space-y-4" style={{ boxShadow: '4px 4px 0 rgba(0,0,0,0.08)' }}>
                 {[
-                  { n: '1', title: 'Questionnaire general', desc: 'Bouton dans la sidebar droite (icone presse-papier). Votre avis global sur l\'indice et vos suggestions y sont enregistres.' },
-                  { n: '2', title: 'Choisir un corridor', desc: 'Selecteur dans la sidebar gauche. Zoomez sur l\'un des deux axes transfrontaliers pour evaluer les troncons en detail.' },
-                  { n: '3', title: 'Poser des points sur la carte', desc: 'Bouton + Ajouter dans le header, puis cliquez sur la carte. Le point est automatiquement rattache au troncon le plus proche.' },
-                  { n: '4', title: 'Laisser un commentaire general', desc: 'Section Commentaires dans la sidebar gauche. Pour les remarques qui ne se rattachent pas a un troncon precis.' },
+                  { n: 'Etape 1', title: 'Remplir le questionnaire general', desc: '' },
+                  { n: 'Etape 2', title: 'Choisir un faisceau de travail', desc: 'Saint-Julien vers Carouge et Gaillard vers les Eaux-vives' },
+                  { n: 'Etape 3', title: 'Ajouter des commentaires localises et voter sur les commentaires des autres personnes', desc: 'Bouton Ajouter une observation en haut a droite de la carte' },
                 ].map(({ n, title, desc }) => (
-                  <div key={n} className="flex items-start gap-3">
-                    <span className="shrink-0 w-6 h-6 flex items-center justify-center bg-[#2E6A4A] text-[#D3E4D7] text-[10px] font-mono font-bold">{n}</span>
+                  <div key={n} className="space-y-1 border-b border-[#ece9e4] pb-3 last:border-b-0 last:pb-0">
                     <div>
-                      <p className="text-[12px] text-[#0a0a0a] font-semibold leading-tight mb-0.5">{title}</p>
-                      <p className="text-[11px] text-[#5c5c5c] leading-relaxed">{desc}</p>
+                      <p className="text-[11px] uppercase tracking-[0.12em] text-[#2E6A4A] font-extrabold mb-1">{n}</p>
+                      <p className="text-[13px] text-[#0a0a0a] font-semibold leading-tight">{title}</p>
+                      {desc ? <p className="text-[11px] text-[#5c5c5c] leading-relaxed mt-1">{desc}</p> : null}
                     </div>
                   </div>
                 ))}
+
+                <div className="pt-1">
+                  <p className="text-[11px] text-[#5c5c5c] leading-relaxed">
+                    Vers l'application dediees pour observer l'indice :{' '}
+                    <a
+                      href="https://active.situee.ch"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[#2E6A4A] underline underline-offset-2 hover:text-[#1f4d36]"
+                    >
+                      active.situee.ch
+                    </a>
+                  </p>
+                </div>
               </div>
 
-              {/* Corridors */}
-              <div className="border-2 border-[#2E6A4A] bg-white p-4">
-                <h3 className="text-[11px] uppercase tracking-[0.12em] text-[#2E6A4A] mb-2">Les deux corridors</h3>
-                <ul className="text-[12px] text-[#5c5c5c] space-y-1 ml-4 list-disc">
-                  <li><strong className="text-[#2E6A4A]">Saint-Julien – PLO – Geneve</strong></li>
-                  <li><strong className="text-[#2E6A4A]">Gaillard – Thonex – Eaux-Vives</strong></li>
-                </ul>
-                <p className="text-[11px] text-[#999] mt-2">
-                  La carte reste disponible a l&apos;echelle du territoire complet. Le selecteur de corridor sert a zoomer et a filtrer les contributions.
-                </p>
-              </div>
-
-              {/* Note */}
-              <div className="border border-[#e0e0dc] p-3">
-                <p className="text-[11px] text-[#999] leading-relaxed">
-                  <strong className="text-[#5c5c5c]">Note :</strong> seul l&apos;auteur d&apos;une contribution peut la supprimer. Votre identifiant est genere automatiquement – aucun mot de passe requis.
-                </p>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
+                  onClick={handleDismissHelpPermanently}
+                  className="px-3 py-2 border-2 border-[#0a0a0a] bg-white text-[11px] uppercase tracking-[0.12em] hover:bg-[#f3f6f3]"
+                >
+                  Ne plus afficher
+                </button>
+                <button
+                  onClick={() => setShowHelp(false)}
+                  className="px-3 py-2 border-2 border-[#0a0a0a] bg-[#2E6A4A] text-[#D3E4D7] text-[11px] uppercase tracking-[0.12em]"
+                >
+                  Fermer
+                </button>
               </div>
             </div>
           </div>

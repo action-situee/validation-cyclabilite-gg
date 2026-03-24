@@ -13,14 +13,19 @@ function normalizeObservation(id: string, payload: Partial<ObservationRecord> | 
   if (!payload) return null;
   if (!Number.isFinite(payload.latitude) || !Number.isFinite(payload.longitude)) return null;
   if (!String(payload.commentaire || '').trim()) return null;
-  if (!String(payload.categorie || '').trim()) return null;
+  const categories = Array.isArray(payload.categories_concernees)
+    ? payload.categories_concernees.map((value) => String(value)).filter(Boolean)
+    : [];
+  const primaryCategory = String(payload.categorie || categories[0] || '').trim();
+  if (!primaryCategory) return null;
 
   return {
     id,
     latitude: Number(payload.latitude),
     longitude: Number(payload.longitude),
     commentaire: String(payload.commentaire || ''),
-    categorie: String(payload.categorie || 'autre'),
+    categorie: primaryCategory,
+    categories_concernees: categories.length > 0 ? categories : [primaryCategory],
     type_autre: payload.type_autre ? String(payload.type_autre) : undefined,
     classes_concernees: Array.isArray(payload.classes_concernees)
       ? payload.classes_concernees.map((value) => String(value))

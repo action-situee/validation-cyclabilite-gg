@@ -1,0 +1,1 @@
+ALTER TABLE observations ADD COLUMN categories_concernees_json TEXT NOT NULL DEFAULT '[]';

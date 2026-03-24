@@ -137,5 +137,5 @@ export const FAISCEAUX: Faisceau[] = [
   },
 ];
 
-export const DEFAULT_CENTER: [number, number] = [46.178, 6.170];
-export const DEFAULT_ZOOM = 12;
+export const DEFAULT_CENTER: [number, number] = [46.1467, 6.1563];
+export const DEFAULT_ZOOM = 10.45;

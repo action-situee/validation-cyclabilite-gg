@@ -21,6 +21,7 @@ type ObservationRow = {
   longitude: number;
   commentaire: string;
   categorie: string;
+  categories_concernees_json?: string | null;
   type_autre?: string | null;
   classes_concernees_json?: string | null;
   auteur: string;
@@ -119,6 +120,7 @@ function mapObservation(row: ObservationRow, comments: ObservationCommentRecord[
     longitude: Number(row.longitude),
     commentaire: row.commentaire,
     categorie: row.categorie,
+    categories_concernees: parseJsonArray<string>(row.categories_concernees_json),
     type_autre: row.type_autre || undefined,
     classes_concernees: parseJsonArray<string>(row.classes_concernees_json),
     auteur: row.auteur,
@@ -170,7 +172,7 @@ function mapSurvey(row: SurveyRow): SurveyRecord {
 function upsertObservationStatement(db: D1DatabaseLike, observation: ObservationRecord) {
   return db.prepare(`
     INSERT INTO observations (
-      id, latitude, longitude, commentaire, categorie, type_autre, classes_concernees_json,
+      id, latitude, longitude, commentaire, categorie, categories_concernees_json, type_autre, classes_concernees_json,
       auteur, organisation, role, date, heure, cible_id, faisceau_id, segment_id,
       segment_label, segment_score_calcule, indice_juge, upvotes, downvotes,
       voted_by_json, photos_json, owner_fingerprint, updated_at
@@ -180,6 +182,7 @@ function upsertObservationStatement(db: D1DatabaseLike, observation: Observation
       longitude = excluded.longitude,
       commentaire = excluded.commentaire,
       categorie = excluded.categorie,
+      categories_concernees_json = excluded.categories_concernees_json,
       type_autre = excluded.type_autre,
       classes_concernees_json = excluded.classes_concernees_json,
       auteur = excluded.auteur,
@@ -205,6 +208,7 @@ function upsertObservationStatement(db: D1DatabaseLike, observation: Observation
     observation.longitude,
     observation.commentaire,
     observation.categorie,
+    jsonArray(observation.categories_concernees),
     toNullableString(observation.type_autre),
     jsonArray(observation.classes_concernees),
     observation.auteur,

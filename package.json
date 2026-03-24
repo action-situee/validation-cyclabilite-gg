@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "data:prepare": "node ./scripts/prepare-public-data.mjs",
+    "data:corridors": "node ./scripts/build-corridors-pmtiles.mjs",
     "dev": "vite --host 0.0.0.0",
     "build": "npm run data:prepare && vite build",
     "preview": "vite preview --host 0.0.0.0",

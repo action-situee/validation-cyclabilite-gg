@@ -3,11 +3,8 @@ import {
   X,
   ThumbsUp,
   ThumbsDown,
-  MessageCircle,
   User,
-  Building2,
   Trash2,
-  Image as ImageIcon,
   Send,
 } from 'lucide-react';
 import type { ObservationLibre } from '../types';
@@ -43,13 +40,12 @@ export function ObservationThread({
     () => [...(observation.commentaires || [])].reverse(),
     [observation.commentaires],
   );
-  const categoryLabel = OBS_LABELS[observation.categorie] || observation.categorie;
+  const categoryLabels = (observation.categories_concernees && observation.categories_concernees.length > 0
+    ? observation.categories_concernees
+    : [observation.categorie]
+  ).map((category) => OBS_LABELS[category] || category);
   const indiceLabel = observation.indice_juge ? INDICE_LABELS[observation.indice_juge] : null;
-  const hasDetails =
-    Boolean(observation.type_autre) ||
-    Boolean(indiceLabel) ||
-    Boolean(observation.classes_concernees && observation.classes_concernees.length > 0);
-  const [showDetails, setShowDetails] = useState(false);
+  const hasDetails = Boolean(observation.type_autre);
 
   return (
     <>
@@ -73,71 +69,46 @@ export function ObservationThread({
                 <X className="w-5 h-5" />
               </button>
             </div>
-
-            {/* Ligne compacte: nom contributeur + catégorie + classes */}
-            <div className="flex flex-wrap items-center gap-2 text-[10px] text-[#5c5c5c]">
-              <span className="flex items-center gap-1 text-[#0a0a0a] font-mono">
-                <User className="w-3 h-3" />
-                {observation.auteur}
-              </span>
-              {observation.organisation && (
-                <span className="flex items-center gap-1 text-[#80867f] font-mono">
-                  <Building2 className="w-3 h-3" />
-                  {observation.organisation}
-                </span>
-              )}
-              <span className="text-[10px] uppercase tracking-[0.12em] text-[#7b2ff7]">
-                {categoryLabel}
-              </span>
-              {observation.classes_concernees && observation.classes_concernees.length > 0 && (
-                <span className="flex flex-wrap gap-1">
-                  {observation.classes_concernees.slice(0, 2).map((classe) => (
-                    <span
-                      key={classe}
-                      className="px-1.5 py-0.5 border border-[#d8d2ca] bg-[#f7f7f3] text-[9px] uppercase tracking-[0.08em]"
-                    >
-                      {classe}
-                    </span>
-                  ))}
-                  {observation.classes_concernees.length > 2 && (
-                    <span className="text-[9px] text-[#999]">+{observation.classes_concernees.length - 2}</span>
-                  )}
-                </span>
-              )}
-            </div>
-
-            {hasDetails && (
-              <button
-                type="button"
-                onClick={() => setShowDetails((previous) => !previous)}
-                className="mt-3 text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c] hover:text-[#0a0a0a] transition-colors"
-              >
-                {showDetails ? 'Masquer les détails' : 'Afficher les détails'}
-              </button>
-            )}
-
-            {hasDetails && showDetails && (
-              <div className="mt-2 border-2 border-[#e0e0dc] p-3 space-y-2">
-                {observation.type_autre && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-[#999] uppercase tracking-[0.12em]">Type autre</span>
-                    <span className="text-[11px] text-[#0a0a0a] font-mono">{observation.type_autre}</span>
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0 flex-1 space-y-2 text-[10px] text-[#5c5c5c]">
+                <div className="flex items-start gap-2">
+                  <span className="mt-0.5 text-[#0a0a0a]"><User className="w-3 h-3" /></span>
+                  <div className="min-w-0 space-y-1">
+                    <p className="text-[#0a0a0a]">
+                      <span className="font-semibold uppercase tracking-[0.12em] text-[#5c5c5c]">Nom :</span>{' '}
+                      <span className="font-mono">{observation.auteur}</span>
+                    </p>
+                    {observation.organisation && (
+                      <p className="text-[#80867f]">
+                        <span className="font-semibold uppercase tracking-[0.12em]">Organisation :</span>{' '}
+                        <span className="font-mono">{observation.organisation}</span>
+                      </p>
+                    )}
                   </div>
-                )}
-                {indiceLabel && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-[#999] uppercase tracking-[0.12em]">Avis sur l’indice</span>
-                    <span className="text-[11px] text-[#0a0a0a] font-mono">{indiceLabel}</span>
+                </div>
+
+                <div>
+                  <p className="font-semibold uppercase tracking-[0.12em] text-[#5c5c5c] mb-1">Objet :</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {categoryLabels.map((label) => (
+                      <span
+                        key={label}
+                        className="px-1.5 py-0.5 border border-[#d8d2ca] bg-[#f7f7f3] text-[9px] uppercase tracking-[0.08em] text-[#7b2ff7]"
+                      >
+                        {label}
+                      </span>
+                    ))}
                   </div>
-                )}
+                </div>
+
                 {observation.classes_concernees && observation.classes_concernees.length > 0 && (
                   <div>
-                    <p className="text-[10px] text-[#999] uppercase tracking-[0.12em] mb-2">Classes concernées</p>
+                    <p className="font-semibold uppercase tracking-[0.12em] text-[#5c5c5c] mb-1">Classe concernée :</p>
                     <div className="flex flex-wrap gap-1.5">
                       {observation.classes_concernees.map((classe) => (
                         <span
                           key={classe}
-                          className="text-[9px] uppercase tracking-wider bg-[#f0f0ec] text-[#5c5c5c] px-2 py-0.5 border border-[#d8d2ca]"
+                          className="px-1.5 py-0.5 border border-[#d8d2ca] bg-[#f7f7f3] text-[9px] uppercase tracking-[0.08em]"
                         >
                           {classe}
                         </span>
@@ -145,40 +116,80 @@ export function ObservationThread({
                     </div>
                   </div>
                 )}
-              </div>
-            )}
 
-            {observation.photos && observation.photos.length > 0 && (
-              <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1">
-                {observation.photos.map((photo, index) => (
+                {indiceLabel && (
+                  <div>
+                    <p className="font-semibold uppercase tracking-[0.12em] text-[#5c5c5c] mb-1">Avis sur l’indice :</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="px-1.5 py-0.5 border border-[#d8d2ca] bg-[#f7f7f3] text-[9px] uppercase tracking-[0.08em]">
+                        {indiceLabel}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {observation.photos && observation.photos.length > 0 && (
+                <div className="md:w-[180px] md:shrink-0">
                   <button
-                    key={index}
                     type="button"
-                    onClick={() => setLightboxPhoto(photo)}
-                    className="shrink-0 w-16 h-16 overflow-hidden border-2 border-[#e0e0dc] hover:border-[#7b2ff7] transition-all"
+                    onClick={() => setLightboxPhoto(observation.photos![0])}
+                    className="block w-full overflow-hidden border-2 border-[#e0e0dc] hover:border-[#7b2ff7] transition-all bg-[#f7f7f3]"
                   >
-                    <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                    <img
+                      src={observation.photos[0]}
+                      alt="Photo principale"
+                      className="h-36 w-full object-cover md:h-[180px]"
+                    />
                   </button>
-                ))}
+                  {observation.photos.length > 1 && (
+                    <div className="mt-1.5 flex gap-1.5 overflow-x-auto pb-1">
+                      {observation.photos.slice(1).map((photo, index) => (
+                        <button
+                          key={photo}
+                          type="button"
+                          onClick={() => setLightboxPhoto(photo)}
+                          className="shrink-0 w-12 h-12 overflow-hidden border border-[#e0e0dc] hover:border-[#7b2ff7] transition-all"
+                        >
+                          <img src={photo} alt={`Photo ${index + 2}`} className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {hasDetails && (
+              <div className="mt-2 border-2 border-[#e0e0dc] p-3 space-y-2">
+                {observation.type_autre && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-[#999] uppercase tracking-[0.12em]">Type autre</span>
+                    <span className="text-[11px] text-[#0a0a0a] font-mono">{observation.type_autre}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            <div>
-              <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-2">
-                Observation remontée
+          <div className="flex-1 overflow-y-auto p-4 space-y-5">
+            <section className="mx-auto w-full max-w-2xl text-center">
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-3">
+                Feed des commentaires
               </h3>
-              <div className="border border-[#d0d4ce] bg-white p-4" style={{ boxShadow: '2px 2px 0 rgba(0,0,0,0.06)' }}>
-                <p className="text-[15px] text-[#0a0a0a] leading-relaxed">
+              <div
+                className="border border-[#d0d4ce] bg-white px-5 py-6 md:px-8 md:py-8"
+                style={{ boxShadow: '4px 4px 0 rgba(0,0,0,0.08)' }}
+              >
+                <p className="text-[16px] text-[#0a0a0a] leading-relaxed md:text-[18px]">
                   {observation.commentaire}
                 </p>
               </div>
-            </div>
+            </section>
 
-            <div>
-              <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#3b403d] mb-2">
-                Ajouter un commentaire
+            <section className="mx-auto w-full max-w-lg border-t border-[#ece8e1] pt-3">
+              <h3 className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8a8f88] mb-1.5">
+                Compléter ce commentaire
               </h3>
               <form
                 onSubmit={(event) => {
@@ -187,41 +198,40 @@ export function ObservationThread({
                   onAddComment(observation.id, newComment.trim());
                   setNewComment('');
                 }}
-                className="space-y-2 mb-4"
+                className="space-y-1.5 mb-3"
               >
                 <textarea
                   value={newComment}
                   onChange={(event) => setNewComment(event.target.value)}
-                  placeholder="Ajouter un commentaire sur cette remontée..."
-                  className="w-full px-3 py-2 border border-[#d0d4ce] bg-white text-[12px] resize-none focus:outline-none focus:border-[#f72585] transition-colors"
-                  rows={3}
+                  placeholder="Compléter ce commentaire..."
+                  className="w-full px-2.5 py-2 border border-[#ddd8cf] bg-[#fcfcfa] text-[11px] resize-none focus:outline-none focus:border-[#f72585] transition-colors"
+                  rows={2}
                 />
                 <div className="flex justify-end">
-                  <Button variant="primary" size="sm" type="submit" disabled={!newComment.trim()}>
+                  <Button variant="primary" size="sm" type="submit" disabled={!newComment.trim()} className="h-7 px-2.5">
                     <Send className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               </form>
 
-              <div className="space-y-2">
-                {observationComments.length === 0 && (
-                  <div className="text-center py-6 border-2 border-dashed border-[#e0e0dc]">
-                    <MessageCircle className="w-5 h-5 text-[#ccc] mx-auto mb-2" />
-                    <p className="text-[11px] text-[#999]">Aucun commentaire pour l’instant</p>
-                  </div>
+              <div className="space-y-1.5">
+                {observationComments.length > 0 && (
+                  <h4 className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8a8f88] pt-0.5">
+                    Compléments
+                  </h4>
                 )}
 
                 {observationComments.map((commentaire) => (
-                  <div key={commentaire.id} className="border-2 border-[#e0e0dc] p-3">
-                    <p className="text-[12px] text-[#0a0a0a] leading-relaxed mb-1.5">{commentaire.texte}</p>
-                    <div className="flex items-center justify-between gap-2 text-[10px] text-[#999] font-mono">
+                  <div key={commentaire.id} className="border border-[#e6e2db] bg-[#fcfcfa] p-2.5">
+                    <p className="text-[11px] text-[#303330] leading-relaxed mb-1">{commentaire.texte}</p>
+                    <div className="flex items-center justify-between gap-2 text-[9px] text-[#999] font-mono">
                       <span>{commentaire.auteur || 'Anonyme'}</span>
                       <span>{formatTimestamp(commentaire)}</span>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
           </div>
 
           {/* Footer: actions + score */}
@@ -262,47 +272,6 @@ export function ObservationThread({
               </button>
             </div>
 
-            {hasDetails && (
-              <button
-                type="button"
-                onClick={() => setShowDetails((previous) => !previous)}
-                className="mt-3 text-[10px] uppercase tracking-[0.12em] text-[#5c5c5c] hover:text-[#0a0a0a] transition-colors"
-              >
-                {showDetails ? 'Masquer les détails' : 'Afficher les détails'}
-              </button>
-            )}
-
-            {hasDetails && showDetails && (
-              <div className="mt-2 border-2 border-[#e0e0dc] p-3 space-y-2">
-                {observation.type_autre && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-[#999] uppercase tracking-[0.12em]">Type autre</span>
-                    <span className="text-[11px] text-[#0a0a0a] font-mono">{observation.type_autre}</span>
-                  </div>
-                )}
-                {indiceLabel && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-[#999] uppercase tracking-[0.12em]">Avis sur l’indice</span>
-                    <span className="text-[11px] text-[#0a0a0a] font-mono">{indiceLabel}</span>
-                  </div>
-                )}
-                {observation.classes_concernees && observation.classes_concernees.length > 0 && (
-                  <div>
-                    <p className="text-[10px] text-[#999] uppercase tracking-[0.12em] mb-2">Classes concernées</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {observation.classes_concernees.map((classe) => (
-                        <span
-                          key={classe}
-                          className="text-[9px] uppercase tracking-wider bg-[#f0f0ec] text-[#5c5c5c] px-2 py-0.5 border border-[#d8d2ca]"
-                        >
-                          {classe}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </div>

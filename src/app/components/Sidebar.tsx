@@ -50,7 +50,7 @@ export function Sidebar({
                 Lisez l&apos;indice, comparez les classes et contribuez dans le panneau de gauche.
               </p>
             </div>
-            <InfoTip text="Ce panneau regroupe la lecture de l'indice, le fond de carte et la legende quantile." />
+            <InfoTip text="Ce panneau de droite sert a lire l'indice affiche sur la carte : profil du segment ou du carreau survole, changement de classe affichee, et lecture de la legende de couleurs." />
           </div>
 
           <HoveredSegmentCard
@@ -66,11 +66,7 @@ export function Sidebar({
             <h3 className="text-[10px] uppercase tracking-[0.15em] text-[#5c5c5c]">
               Legende quantile
             </h3>
-            <InfoTip text="Les couleurs utilisent les seuils quantiles publies pour toute la distribution territoriale. La legende reprend exactement les classes appliquees sur la carte." />
-          </div>
-          <div className="mb-3 inline-flex items-center gap-2 border border-[#c9d0cc] bg-white px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[#2E6A4A]">
-            <span className="inline-block h-2 w-2 rounded-full bg-[#2E6A4A]" />
-            Mode quantile
+            <InfoTip text="La carte est coloriee avec des seuils quantiles : chaque couleur correspond a une tranche de valeurs relative a l'ensemble du territoire, et non a une echelle lineaire reguliere." />
           </div>
           <div className="grid grid-cols-1 gap-1.5">
             {legendBins.map((bin) => (

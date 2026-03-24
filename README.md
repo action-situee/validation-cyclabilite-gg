@@ -62,6 +62,14 @@ npm run data:prepare
 npm run dev
 ```
 
+Pour brancher le front local sur l'API Cloudflare distante et donc lire/ecrire dans D1 depuis `localhost`, definir avant `npm run dev`:
+
+```sh
+VITE_DEV_API_PROXY_TARGET=https://validation-cyclabilite-gg.pages.dev npm run dev
+```
+
+Avec ce proxy Vite, les appels front vers `/api/*` sont rediriges vers le backend Cloudflare distant tout en restant same-origin pour le navigateur local.
+
 Autres commandes:
 
 ```bash

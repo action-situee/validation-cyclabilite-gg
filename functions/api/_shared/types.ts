@@ -13,6 +13,7 @@ export interface ObservationRecord {
   longitude: number;
   commentaire: string;
   categorie: string;
+  categories_concernees?: string[];
   type_autre?: string;
   classes_concernees?: string[];
   auteur: string;

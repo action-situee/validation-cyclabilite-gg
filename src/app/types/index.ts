@@ -77,6 +77,7 @@ export interface ObservationLibre {
   longitude: number;
   commentaire: string;
   categorie: ObservationCategory;
+  categories_concernees?: ObservationCategory[];
   type_autre?: string;
   classes_concernees?: ObservationMetricClass[];
   auteur: string;

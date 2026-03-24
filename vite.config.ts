@@ -3,6 +3,18 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
+const env = process.env;
+const devApiProxyTarget = env.VITE_DEV_API_PROXY_TARGET || '';
+const apiProxy = devApiProxyTarget
+  ? {
+      '/api': {
+        target: devApiProxyTarget,
+        changeOrigin: true,
+        secure: true,
+      },
+    }
+  : undefined;
+
 export default defineConfig({
   plugins: [
     react(),
@@ -16,6 +28,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    proxy: apiProxy,
   },
   preview: {
     host: '0.0.0.0',

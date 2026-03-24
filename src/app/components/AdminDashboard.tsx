@@ -5,6 +5,8 @@ import { contributionsApi } from '../utils/api';
 import { Button } from './ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 
+const SITUEE_LOGO_URL = 'https://raw.githubusercontent.com/action-situee/assets/refs/heads/main/images/Fichier_36-5.svg';
+
 type AdminTab = 'observations' | 'commentaires' | 'surveys';
 
 type LoadState = {
@@ -70,23 +72,35 @@ export function AdminDashboard() {
     <div className="min-h-screen bg-[#E5EEE6] text-[#0a0a0a]">
       <div className="border-b-2 border-[#0a0a0a] bg-white px-4 py-4 sm:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+          <div className="flex items-center gap-3">
+            <a
+              href="https://situee.ch"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center shrink-0"
+              aria-label="Situee"
+              title="Situee"
+            >
+              <img src={SITUEE_LOGO_URL} alt="Situee" className="h-6 w-auto" />
+            </a>
+            <div>
             <p className="text-[10px] uppercase tracking-[0.18em] text-[#5c5c5c]">Administration</p>
-            <h1 className="text-[18px] font-semibold uppercase tracking-[0.08em]">Lecture tabulaire des remontees</h1>
+            <h1 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#1f2b24]">Lecture tabulaire des remontees</h1>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <a
               href="#"
-              className="inline-flex h-9 items-center justify-center border-2 border-[#0a0a0a] bg-white px-4 text-[12px] font-semibold uppercase tracking-[0.08em] hover:bg-[#f2f5f2]"
+              className="inline-flex h-8 items-center justify-center border border-[#0a0a0a] bg-white px-3 text-[11px] font-semibold uppercase tracking-[0.08em] hover:bg-[#f2f5f2]"
             >
               Retour carte
             </a>
             <Button
               variant="outline"
               onClick={() => void loadData()}
-              className="border-2 border-[#0a0a0a] bg-white text-[12px] font-semibold uppercase tracking-[0.08em]"
+              className="h-8 border border-[#0a0a0a] bg-white px-3 text-[11px] font-semibold uppercase tracking-[0.08em]"
             >
-              <RefreshCcw className="h-4 w-4" />
+              <RefreshCcw className="h-3.5 w-3.5" />
               Actualiser
             </Button>
           </div>
@@ -139,6 +153,7 @@ export function AdminDashboard() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
+                      <TableHead>Photo</TableHead>
                       <TableHead>Faisceau</TableHead>
                       <TableHead>Categorie</TableHead>
                       <TableHead>Auteur</TableHead>
@@ -152,8 +167,25 @@ export function AdminDashboard() {
                     {sortedObservations.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell>{formatDate(item.date, item.heure)}</TableCell>
+                        <TableCell>
+                          {item.photos && item.photos.length > 0 ? (
+                            <button
+                              type="button"
+                              className="block h-8 w-8 overflow-hidden border border-[#d5dbd7] bg-[#f5f7f5]"
+                              title="Voir la photo"
+                            >
+                              <img
+                                src={item.photos[0]}
+                                alt="Miniature"
+                                className="h-full w-full object-cover"
+                              />
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-[#999]">-</span>
+                          )}
+                        </TableCell>
                         <TableCell>{item.faisceau_id || '-'}</TableCell>
-                        <TableCell>{item.categorie}</TableCell>
+                        <TableCell>{(item.categories_concernees && item.categories_concernees.length > 0 ? item.categories_concernees : [item.categorie]).join(', ')}</TableCell>
                         <TableCell>{item.auteur}</TableCell>
                         <TableCell className="max-w-[440px] whitespace-normal">{truncate(item.commentaire, 180)}</TableCell>
                         <TableCell>{item.upvotes}/{item.downvotes}</TableCell>

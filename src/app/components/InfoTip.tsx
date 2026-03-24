@@ -1,5 +1,4 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Info } from 'lucide-react';
 
 interface InfoTipProps {
   text: string;
@@ -83,7 +82,9 @@ export function InfoTip({ text, align = 'right' }: InfoTipProps) {
         aria-label="Afficher l'aide"
         aria-expanded={open}
       >
-        <Info className="w-3 h-3 text-[#ccc] hover:text-[#2E6A4A] focus:text-[#2E6A4A] transition-colors cursor-help" />
+        <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[#c7cdc9] bg-white text-[10px] font-semibold leading-none text-[#7a847e] hover:border-[#2E6A4A] hover:text-[#2E6A4A] transition-colors cursor-help">
+          i
+        </span>
       </button>
 
       {open && (
