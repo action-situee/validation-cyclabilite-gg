@@ -17,7 +17,7 @@ export const THEME_NEON: Record<string, string> = {
 
 export const THEME_LABELS: Record<string, string> = {
   permeabilite_frontiere: 'Perméabilité frontière',
-  intersections:          'Sécurité intersections',
+  intersections:          'Intersections',
   giratoires:             'Giratoires',
   alternatives:           'Maillage & alternatives',
   continuite:             'Continuité & confort',
@@ -50,7 +50,7 @@ export const OBS_NEON: Record<string, string> = {
 };
 
 export const OBS_LABELS: Record<string, string> = {
-  securite_intersections: 'Sécurité intersections',
+  securite_intersections: 'Intersections',
   giratoire: 'Giratoire',
   maillage_alternative: 'Maillage et alternative',
   equipement: 'Équipement',
@@ -62,7 +62,7 @@ export const OBS_LABELS: Record<string, string> = {
 
 /** Entrées ordonnées pour la légende sidebar */
 export const OBS_CATEGORIES = [
-  { key: 'securite_intersections', color: '#f72585', label: 'Sécurité intersections' },
+  { key: 'securite_intersections', color: '#f72585', label: 'Intersections' },
   { key: 'giratoire', color: '#f72585', label: 'Giratoire' },
   { key: 'maillage_alternative', color: '#f72585', label: 'Maillage et alternative' },
   { key: 'equipement', color: '#f72585', label: 'Équipement' },

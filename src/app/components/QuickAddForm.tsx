@@ -19,7 +19,7 @@ interface QuickAddFormProps {
 }
 
 const RETURN_TYPES: { value: ObservationCategory; label: string }[] = [
-  { value: 'securite_intersections', label: 'Sécurité intersections' },
+  { value: 'securite_intersections', label: 'Intersections' },
   { value: 'giratoire', label: 'Giratoire' },
   { value: 'equipement', label: 'Équipement' },
   { value: 'bande_piste', label: 'Bande / piste' },
@@ -104,7 +104,7 @@ function MultiSelect({
 }
 
 export function QuickAddForm({ latitude, longitude, segment, onSubmit, onClose }: QuickAddFormProps) {
-  const [categoriesConcernees, setCategoriesConcernees] = useState<ObservationCategory[]>(['securite_intersections']);
+  const [categoriesConcernees, setCategoriesConcernees] = useState<ObservationCategory[]>([]);
   const [typeAutre, setTypeAutre] = useState('');
   const [classesConcernees, setClassesConcernees] = useState<ObservationMetricClass[]>([]);
   const [indiceJuge, setIndiceJuge] = useState<ObservationIndiceFeedback | ''>('');
