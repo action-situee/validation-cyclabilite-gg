@@ -601,7 +601,7 @@ function AppInner() {
 
                 <div className="pt-1">
                   <p className="text-[11px] text-[#5c5c5c] leading-relaxed">
-                    L&apos;indice s&apos;affiche sur la carte ! Vous pouvez comparer les classes ci-dessous et contribuer à la carte en ajoutant vos commentaires via le bouton Consignes.
+                    L&apos;indice s&apos;affiche sur la carte ! Vous pouvez comparer les classes dans le bandeau de droite et contribuer à la carte en ajoutant vos commentaires. Retrouvez les consignes en haut a gauche. Retrouvez l'indice conplet sur la plateforme dédiée:
                     <a
                       href="https://active.situee.ch"
                       target="_blank"
