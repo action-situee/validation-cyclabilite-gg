@@ -601,7 +601,7 @@ function AppInner() {
 
                 <div className="pt-1">
                   <p className="text-[11px] text-[#5c5c5c] leading-relaxed">
-                    L&apos;indice s&apos;affiche sur la carte ! Vous pouvez comparer les classes dans le bandeau de droite et contribuer à la carte en ajoutant vos commentaires. Retrouvez les consignes en haut a gauche. Retrouvez l'indice conplet sur la plateforme dédiée:
+                    L&apos;indice de cyclabilité s&apos;affiche sur la carte. Vous pouvez comparer les classes structurantes de l'indice dans le bandeau de droite et contribuer à la carte en ajoutant vos commentaires dans le bandeau de gauche (ou appuyer sur le bouton). Retrouvez les consignes en haut a gauche à tout moment. Retrouvez l'indice complet et plus d'informations sur la plateforme dédiée :
                     <a
                       href="https://active.situee.ch"
                       target="_blank"
