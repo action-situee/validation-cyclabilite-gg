@@ -3,6 +3,9 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
+import { VectorTile } from '@mapbox/vector-tile';
+import { PMTiles, tileIdToZxy } from 'pmtiles';
+import Protobuf from 'pbf';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,6 +26,7 @@ const atlasPaths = {
     'bike_agglo_segment.ndjson',
   ),
   sourcePmtiles: '/tiles/bike_agglo_segment.pmtiles',
+  sourcePmtilesFile: path.join(repoRoot, 'public', 'tiles', 'bike_agglo_segment.pmtiles'),
   outputSegments: path.join(dataDirs.atlas, 'bike-segments.geojson'),
   outputSummary: path.join(dataDirs.atlas, 'bike-segments-summary.json'),
   outputQuantiles: path.join(dataDirs.atlas, 'bike-metric-quantiles.json'),
@@ -219,13 +223,14 @@ function classifyBikeIndex(value) {
   return 'tres_bon';
 }
 
-function computeQuantileThresholds(values, stepCount = 10) {
-  if (!Array.isArray(values) || values.length < stepCount + 1) return [];
+function computeQuantileThresholds(values, thresholdCount = 10) {
+  if (!Array.isArray(values) || values.length < thresholdCount + 1) return [];
   const sorted = [...values].sort((a, b) => a - b);
   const thresholds = [];
+  const bucketCount = thresholdCount + 1;
 
-  for (let i = 1; i <= stepCount; i += 1) {
-    const position = ((sorted.length - 1) * i) / stepCount;
+  for (let i = 1; i <= thresholdCount; i += 1) {
+    const position = ((sorted.length - 1) * i) / bucketCount;
     const lower = Math.floor(position);
     const upper = Math.ceil(position);
     const weight = position - lower;
@@ -240,6 +245,118 @@ function computeQuantileThresholds(values, stepCount = 10) {
   }
 
   return thresholds;
+}
+
+class LocalPmtilesSource {
+  constructor(filePath) {
+    this.filePath = filePath;
+  }
+
+  getKey() {
+    return this.filePath;
+  }
+
+  async getBytes(offset, length) {
+    const file = await fs.open(this.filePath, 'r');
+    try {
+      const buffer = Buffer.alloc(length);
+      const { bytesRead } = await file.read(buffer, 0, length, offset);
+      const data = buffer.subarray(0, bytesRead);
+      return {
+        data: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength),
+      };
+    } finally {
+      await file.close();
+    }
+  }
+}
+
+async function collectPmtilesTileEntries(pmtiles, header, offset, length, depth = 0) {
+  const entries = await pmtiles.cache.getDirectory(pmtiles.source, offset, length, header);
+  const tileEntries = [];
+
+  for (const entry of entries) {
+    if (entry.runLength === 0) {
+      if (depth >= 3) {
+        throw new Error('Maximum PMTiles directory depth exceeded.');
+      }
+      tileEntries.push(
+        ...(await collectPmtilesTileEntries(
+          pmtiles,
+          header,
+          header.leafDirectoryOffset + entry.offset,
+          entry.length,
+          depth + 1,
+        )),
+      );
+    } else {
+      tileEntries.push(entry);
+    }
+  }
+
+  return tileEntries;
+}
+
+async function computeQuantilesFromPmtiles(filePath, sourceLayer = 'bikenet') {
+  if (!(await fileExists(filePath))) return null;
+
+  const pmtiles = new PMTiles(new LocalPmtilesSource(filePath));
+  const header = await pmtiles.getHeader();
+  if (header.tileType !== 1) return null;
+
+  const entries = await collectPmtilesTileEntries(
+    pmtiles,
+    header,
+    header.rootDirectoryOffset,
+    header.rootDirectoryLength,
+  );
+  const quantileBuckets = Object.fromEntries(
+    quantileMetricFields.map((field) => [field, []]),
+  );
+  const seenFeatureIds = new Set();
+  let parsedTileCount = 0;
+  let skippedDuplicateFeatures = 0;
+
+  for (const entry of entries) {
+    const [z, x, y] = tileIdToZxy(entry.tileId);
+    if (z !== header.maxZoom) continue;
+
+    const tile = await pmtiles.getZxy(z, x, y);
+    if (!tile?.data) continue;
+
+    parsedTileCount += 1;
+    const vectorTile = new VectorTile(new Protobuf(new Uint8Array(tile.data)));
+    const layer = vectorTile.layers[sourceLayer] || vectorTile.layers[Object.keys(vectorTile.layers)[0]];
+    if (!layer) continue;
+
+    for (let index = 0; index < layer.length; index += 1) {
+      const properties = layer.feature(index).properties || {};
+      const featureId = String(properties.segment_id || `${z}/${x}/${y}/${index}`);
+      if (seenFeatureIds.has(featureId)) {
+        skippedDuplicateFeatures += 1;
+        continue;
+      }
+      seenFeatureIds.add(featureId);
+
+      for (const field of quantileMetricFields) {
+        const rawValue = Number(properties[field]);
+        if (Number.isFinite(rawValue) && rawValue >= 0 && rawValue <= 1) {
+          quantileBuckets[field].push(rawValue);
+        }
+      }
+    }
+  }
+
+  return {
+    source_layer: sourceLayer,
+    source_zoom: header.maxZoom,
+    parsed_tile_count: parsedTileCount,
+    feature_count: seenFeatureIds.size,
+    skipped_duplicate_features: skippedDuplicateFeatures,
+    metrics: Object.fromEntries(
+      quantileMetricFields.map((field) => [field, computeQuantileThresholds(quantileBuckets[field])]),
+    ),
+  };
 }
 
 async function ensureDir(dirPath) {
@@ -439,11 +556,29 @@ async function prepareBikeSegments() {
     by_corridor: summary,
   });
 
+  let pmtilesQuantiles = null;
+  try {
+    pmtilesQuantiles = await computeQuantilesFromPmtiles(atlasPaths.sourcePmtilesFile);
+  } catch (error) {
+    console.warn(
+      `[prepare-public-data] Quantiles PMTiles non generes (${error instanceof Error ? error.message : String(error)}). Repli sur le NDJSON.`,
+    );
+  }
+
   await writeJson(atlasPaths.outputQuantiles, {
     generated_at: new Date().toISOString(),
     source_ndjson: path.relative(repoRoot, atlasPaths.sourceNdjson),
+    source_pmtiles: pmtilesQuantiles ? path.relative(repoRoot, atlasPaths.sourcePmtilesFile) : undefined,
+    source_layer: pmtilesQuantiles?.source_layer,
+    source_zoom: pmtilesQuantiles?.source_zoom,
+    parsed_tile_count: pmtilesQuantiles?.parsed_tile_count,
+    feature_count: pmtilesQuantiles?.feature_count,
+    skipped_duplicate_features: pmtilesQuantiles?.skipped_duplicate_features,
     metrics: Object.fromEntries(
-      quantileMetricFields.map((field) => [field, computeQuantileThresholds(quantileBuckets[field])]),
+      quantileMetricFields.map((field) => [
+        field,
+        pmtilesQuantiles?.metrics[field] || computeQuantileThresholds(quantileBuckets[field]),
+      ]),
     ),
   });
 }

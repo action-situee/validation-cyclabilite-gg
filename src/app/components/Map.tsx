@@ -1151,7 +1151,7 @@ function MapInner({
         source: 'segments',
         'source-layer': BIKE_SOURCE_LAYER,
         paint: {
-          'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.8, 8, 1.2, 10, 1.5, 12, 1.8, 15, 2.4],
+          'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.9, 8, 1.3, 10, 1.65, 12, 1.95, 15, 2.6],
           'line-color': buildColorRampExpression(
             BIKE_METRIC_BY_KEY[selectedMetricRef.current].field,
             metricThresholdsRef.current,

@@ -14,7 +14,7 @@ export const VALUE_PALETTE = [
   '#007A35',
 ] as const;
 
-export const VALUE_THRESHOLDS = [0.18, 0.2, 0.25, 0.29, 0.33, 0.37, 0.41, 0.45, 0.52, 0.95] as const;
+export const VALUE_THRESHOLDS = [0.3023, 0.3304, 0.3538, 0.3734, 0.4008, 0.4186, 0.4318, 0.4502, 0.4767, 0.504] as const;
 const QUANTILE_CLASS_LABELS = ['tres_faible', 'faible', 'moyen', 'bon', 'tres_bon'] as const;
 
 export interface BikeAttributeDefinition {
