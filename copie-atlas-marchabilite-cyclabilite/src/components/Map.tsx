@@ -763,14 +763,15 @@ export function Map({
       setLoadingDetail('Calcul des quantiles');
       setLoadingProgress((previous) => Math.max(previous, 82));
 
-      const paletteSteps = VALUE_PALETTE.length - 1;
+      const thresholdCount = VALUE_PALETTE.length - 1;
+      const bucketCount = VALUE_PALETTE.length;
       const nextQuantileMap: Record<string, number[]> = {};
       for (const [key, values] of Object.entries(valuesByAttr)) {
         if (values.length < 10) continue;
         const sorted = [...values].sort((a, b) => a - b);
         const thresholds: number[] = [];
-        for (let i = 1; i <= paletteSteps; i += 1) {
-          const p = i / paletteSteps;
+        for (let i = 1; i <= thresholdCount; i += 1) {
+          const p = i / bucketCount;
           const pos = (sorted.length - 1) * p;
           const lower = Math.floor(pos);
           const upper = Math.ceil(pos);
