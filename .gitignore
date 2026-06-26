@@ -10,7 +10,9 @@ dist/
 !.env.example
 
 mock-api-data/*.json
-public/data/atlas/
+public/data/atlas/*
+!public/data/atlas/
+!public/data/atlas/bike-metric-quantiles.json
 public/tiles/
 
 Portail web collaboratif/node_modules/

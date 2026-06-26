@@ -99,6 +99,18 @@ Important:
 - sans binding D1, les endpoints `/api/*` repondent en `503`
 - les observations, commentaires et surveys affiches par l'application proviennent uniquement de D1 via cette API
 
+## Deploiement Cloudflare et quantiles
+
+Les PMTiles sont servis depuis R2 en production et restent ignores par Git (`public/tiles/`). Le build Cloudflare ne peut donc pas recalculer les seuils quantiles depuis les tuiles locales.
+
+Le petit manifeste `public/data/atlas/bike-metric-quantiles.json` est versionne explicitement. Il doit etre regenere localement apres mise a jour des PMTiles:
+
+```bash
+npm run data:prepare
+```
+
+Puis le manifeste doit etre commite avec le code. Si les sources atlas lourdes sont absentes pendant le build Cloudflare, le script conserve ce manifeste au lieu de l'ecraser par un fichier vide.
+
 ## Regenerer les fichiers publics depuis l'atlas
 
 ```bash

@@ -486,34 +486,49 @@ async function prepareBikeSegments() {
   try {
     await fs.access(atlasPaths.sourceNdjson);
   } catch {
-    const existingOutputs = await Promise.all([
+    const [hasSegments, hasSummary, hasQuantiles] = await Promise.all([
       fileExists(atlasPaths.outputSegments),
       fileExists(atlasPaths.outputSummary),
       fileExists(atlasPaths.outputQuantiles),
     ]);
 
-    if (existingOutputs.every(Boolean)) {
+    if (hasSegments && hasSummary && hasQuantiles) {
       console.warn(
         `[prepare-public-data] Source NDJSON introuvable (${path.relative(repoRoot, atlasPaths.sourceNdjson)}). Fichiers atlas existants conserves.`,
       );
       return;
     }
 
-    await writeJson(atlasPaths.outputSegments, { type: 'FeatureCollection', features: [] });
-    await writeJson(atlasPaths.outputSummary, {
-      generated_at: new Date().toISOString(),
-      source_ndjson: path.relative(repoRoot, atlasPaths.sourceNdjson),
-      source_pmtiles: atlasPaths.sourcePmtiles,
-      segment_count: 0,
-      by_corridor: {},
-      warning: 'Source NDJSON introuvable. Lancez le pipeline atlas avant de regenerer.',
-    });
-    await writeJson(atlasPaths.outputQuantiles, {
-      generated_at: new Date().toISOString(),
-      source_ndjson: path.relative(repoRoot, atlasPaths.sourceNdjson),
-      metrics: {},
-      warning: 'Source NDJSON introuvable. Quantiles non generes.',
-    });
+    console.warn(
+      `[prepare-public-data] Source NDJSON introuvable (${path.relative(repoRoot, atlasPaths.sourceNdjson)}). Generation de repli pour les sorties manquantes uniquement.`,
+    );
+
+    if (!hasSegments) {
+      await writeJson(atlasPaths.outputSegments, { type: 'FeatureCollection', features: [] });
+    }
+
+    if (!hasSummary) {
+      await writeJson(atlasPaths.outputSummary, {
+        generated_at: new Date().toISOString(),
+        source_ndjson: path.relative(repoRoot, atlasPaths.sourceNdjson),
+        source_pmtiles: atlasPaths.sourcePmtiles,
+        segment_count: 0,
+        by_corridor: {},
+        warning: 'Source NDJSON introuvable. Lancez le pipeline atlas avant de regenerer.',
+      });
+    }
+
+    if (!hasQuantiles) {
+      await writeJson(atlasPaths.outputQuantiles, {
+        generated_at: new Date().toISOString(),
+        source_ndjson: path.relative(repoRoot, atlasPaths.sourceNdjson),
+        metrics: {},
+        warning: 'Source NDJSON introuvable. Quantiles non generes.',
+      });
+    } else {
+      console.warn('[prepare-public-data] Manifeste de quantiles existant conserve.');
+    }
+
     return;
   }
 
