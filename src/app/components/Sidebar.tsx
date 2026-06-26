@@ -2,7 +2,13 @@ import React from 'react';
 import { Bike } from 'lucide-react';
 import type { BikeSegment } from '../types';
 import { HoveredSegmentCard } from './HoveredSegmentCard';
-import { buildQuantileLegendBins, VALUE_THRESHOLDS, type BikeMetricKey } from '../config/bikeMetrics';
+import {
+  buildMetricLegendBins,
+  VALUE_THRESHOLDS,
+  type BikeIndexScale,
+  type BikeMetricKey,
+  type ColorScaleMode,
+} from '../config/bikeMetrics';
 
 interface SidebarProps {
   className?: string;
@@ -11,6 +17,9 @@ interface SidebarProps {
   hoveredSegment: BikeSegment | null;
   hoveredSegmentSource: 'hover' | 'selected' | 'none';
   activeThresholds: number[];
+  colorScaleMode: ColorScaleMode;
+  onColorScaleModeChange: (mode: ColorScaleMode) => void;
+  activeIndexScale: BikeIndexScale;
 }
 
 export function Sidebar({
@@ -20,9 +29,13 @@ export function Sidebar({
   hoveredSegment,
   hoveredSegmentSource,
   activeThresholds,
+  colorScaleMode,
+  onColorScaleModeChange,
+  activeIndexScale,
 }: SidebarProps) {
   const safeThresholds = activeThresholds.length > 0 ? activeThresholds : [...VALUE_THRESHOLDS];
-  const legendBins = buildQuantileLegendBins(safeThresholds);
+  const legendBins = buildMetricLegendBins(safeThresholds);
+  const activeScaleLabel = activeIndexScale === 'carreau200' ? 'carreau 200 m' : 'segment';
 
   return (
     <div className={`w-[360px] bg-[rgba(229,238,230,0.82)] backdrop-blur-[2px] border-l-2 border-[#0a0a0a] flex flex-col h-full overflow-hidden ${className}`}>
@@ -62,9 +75,39 @@ export function Sidebar({
         <div className="p-4 bg-[rgba(229,238,230,0.66)]">
           <div className="mb-3">
             <h3 className="text-[10px] uppercase tracking-[0.15em] text-[#5c5c5c]">
-              Legende quantile
+              Legende {colorScaleMode === 'quantile' ? 'quantile' : 'lineaire'}
             </h3>
+            <p className="mt-1 text-[9px] uppercase tracking-[0.08em] text-[#7a7a7a]">
+              {activeScaleLabel}
+            </p>
           </div>
+
+          <div className="mb-4 inline-flex overflow-hidden border border-[#2E6A4A] bg-white">
+            <button
+              type="button"
+              onClick={() => onColorScaleModeChange('linear')}
+              className={`px-3 py-1.5 text-[10px] uppercase tracking-[0.08em] transition-colors ${
+                colorScaleMode === 'linear'
+                  ? 'bg-[#2E6A4A] text-white'
+                  : 'text-[#5c5c5c] hover:bg-[#E5EEE6]'
+              }`}
+            >
+              Lineaire
+            </button>
+            <span className="w-px bg-[#2E6A4A]" />
+            <button
+              type="button"
+              onClick={() => onColorScaleModeChange('quantile')}
+              className={`px-3 py-1.5 text-[10px] uppercase tracking-[0.08em] transition-colors ${
+                colorScaleMode === 'quantile'
+                  ? 'bg-[#2E6A4A] text-white'
+                  : 'text-[#5c5c5c] hover:bg-[#E5EEE6]'
+              }`}
+            >
+              Quantile
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 gap-1.5">
             {legendBins.map((bin) => (
               <div key={`${bin.color}-${bin.label}`} className="flex items-center gap-2">

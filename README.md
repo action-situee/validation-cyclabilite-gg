@@ -13,10 +13,15 @@ Portail collaboratif de validation de l'indice de cyclabilite du Grand Geneve.
 | Points d'attention | `.geojson` Point ou CSV | aucune | `VITE_CIBLES_GEOJSON_URL` / `VITE_CIBLES_SHEETS_CSV_URL` |
 | Retours terrain | API JSON | D1 via `/api/observations` | `VITE_CONTRIBUTIONS_API_BASE` |
 | Commentaires generaux | API JSON | D1 via `/api/commentaires` | `VITE_CONTRIBUTIONS_API_BASE` |
-| Quantiles de l'indice | `.json` | `public/data/atlas/bike-metric-quantiles.json` | regenere par script |
+| Seuils couleur de l'indice | `.json` | `public/data/atlas/bike-metric-quantiles.json` | quantiles par echelle, regenere par script |
 | Ecriture distante des contributions | endpoints HTTP JSON | D1 via `/api` | `VITE_CONTRIBUTIONS_API_BASE` |
 
 Le portail ne lit pas directement un `.parquet` dans le navigateur. Le brut vit dans `copie-atlas-marchabilite-cyclabilite/` puis passe par le pipeline atlas (`parquet -> ndjson/tiles -> pmtiles + quantiles`).
+
+L'indice source reste normalise entre 0 et 1. Le front ne modifie pas ces scores: il change uniquement leur visualisation couleur. Deux modes sont disponibles:
+
+- lineaire: seuils fixes `0.1, 0.2, ..., 1.0`;
+- quantile: seuils pre-calcules dans `bike-metric-quantiles.json`, par metrique et par echelle cartographique quand disponible (`segment`, `carreau200`).
 
 Les contributions chargees par le front proviennent uniquement de D1 via `/api`. Il n'y a plus de fallback CSV ni de mode mock pour les observations, commentaires ou questionnaires.
 

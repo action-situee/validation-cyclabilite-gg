@@ -14,8 +14,12 @@ export const VALUE_PALETTE = [
   '#007A35',
 ] as const;
 
-export const VALUE_THRESHOLDS = [0.3023, 0.3304, 0.3538, 0.3734, 0.4008, 0.4186, 0.4318, 0.4502, 0.4767, 0.504] as const;
+export const VALUE_THRESHOLDS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1] as const;
+const THRESHOLD_EPSILON = 1e-6;
 const QUANTILE_CLASS_LABELS = ['tres_faible', 'faible', 'moyen', 'bon', 'tres_bon'] as const;
+
+export type ColorScaleMode = 'linear' | 'quantile';
+export type BikeIndexScale = 'segment' | 'carreau200';
 
 export interface BikeAttributeDefinition {
   name: string;
@@ -134,22 +138,82 @@ export const BIKE_CLASS_BY_KEY = Object.fromEntries(
   BIKE_CLASS_DEFINITIONS.map((bikeClass) => [bikeClass.key, bikeClass]),
 ) as Record<BikeClassMetricKey, (typeof BIKE_CLASS_DEFINITIONS)[number]>;
 
+function clampUnit(value: number) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function ensureStrictlyIncreasingUnitThresholds(values: number[]) {
+  if (values.length === 0) return [];
+
+  const thresholds = values.map(clampUnit).sort((a, b) => a - b);
+
+  for (let index = 1; index < thresholds.length; index += 1) {
+    if (thresholds[index] <= thresholds[index - 1]) {
+      thresholds[index] = thresholds[index - 1] + THRESHOLD_EPSILON;
+    }
+  }
+
+  if (thresholds[thresholds.length - 1] > 1) {
+    thresholds[thresholds.length - 1] = 1;
+    for (let index = thresholds.length - 2; index >= 0; index -= 1) {
+      if (thresholds[index] >= thresholds[index + 1]) {
+        thresholds[index] = thresholds[index + 1] - THRESHOLD_EPSILON;
+      }
+    }
+  }
+
+  if (thresholds[0] < 0) {
+    thresholds[0] = 0;
+    for (let index = 1; index < thresholds.length; index += 1) {
+      if (thresholds[index] <= thresholds[index - 1]) {
+        thresholds[index] = thresholds[index - 1] + THRESHOLD_EPSILON;
+      }
+    }
+  }
+
+  return thresholds.map((value) => Number(clampUnit(value).toFixed(6)));
+}
+
+export function normalizeMetricThresholds(
+  thresholds: readonly unknown[] | null | undefined,
+  fallback: readonly number[] = VALUE_THRESHOLDS,
+) {
+  const fallbackValues = [...fallback];
+  const expectedCount = VALUE_PALETTE.length - 1;
+
+  if (!Array.isArray(thresholds)) return fallbackValues;
+
+  const numericThresholds = thresholds
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value >= 0 && value <= 1)
+    .slice(0, expectedCount);
+
+  if (numericThresholds.length !== expectedCount) {
+    return fallbackValues;
+  }
+
+  return ensureStrictlyIncreasingUnitThresholds(numericThresholds);
+}
+
 export function buildColorRampExpression(field: string, thresholds: readonly number[] = VALUE_THRESHOLDS) {
-  const input = ['coalesce', ['to-number', ['get', field]], 0];
+  const input = ['to-number', ['get', field]];
+  const isValidInput = ['all', ['>=', input, 0], ['<=', input, 1]];
+  const safeThresholds = normalizeMetricThresholds(thresholds);
   const expr: any[] = ['step', input, VALUE_PALETTE[0]];
-  const safeThresholds = thresholds.length > 0 ? thresholds : VALUE_THRESHOLDS;
+
   safeThresholds.forEach((threshold, index) => {
     expr.push(threshold, VALUE_PALETTE[index + 1]);
   });
-  return expr;
+
+  return ['case', isValidInput, expr, 'rgba(0, 0, 0, 0)'];
 }
 
 export function getMetricValue(feature: Record<string, unknown>, field: string): number | null {
   const raw = feature[field];
-  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 0 && raw <= 1) return raw;
   if (typeof raw === 'string' && raw.trim() !== '') {
     const value = Number(raw);
-    return Number.isFinite(value) ? value : null;
+    return Number.isFinite(value) && value >= 0 && value <= 1 ? value : null;
   }
   return null;
 }
@@ -159,9 +223,9 @@ export function getMetricValueByKey(feature: BikeSegment | Record<string, unknow
 }
 
 export function getThresholdBucketIndex(value: number | null, thresholds: readonly number[] = VALUE_THRESHOLDS) {
-  if (value === null || Number.isNaN(value)) return 'non_evalue';
+  if (value === null || Number.isNaN(value) || value < 0 || value > 1) return 'non_evalue';
 
-  const safeThresholds = thresholds.length > 0 ? thresholds : VALUE_THRESHOLDS;
+  const safeThresholds = normalizeMetricThresholds(thresholds);
   for (let index = 0; index < safeThresholds.length; index += 1) {
     if (value < safeThresholds[index]) return index;
   }
@@ -173,7 +237,7 @@ export function getMetricClass(value: number | null, thresholds: readonly number
   const bucketIndex = getThresholdBucketIndex(value, thresholds);
   if (bucketIndex === 'non_evalue') return bucketIndex;
 
-  const totalBuckets = (thresholds.length > 0 ? thresholds : VALUE_THRESHOLDS).length + 1;
+  const totalBuckets = normalizeMetricThresholds(thresholds).length + 1;
   const classIndex = Math.min(
     QUANTILE_CLASS_LABELS.length - 1,
     Math.floor((bucketIndex / totalBuckets) * QUANTILE_CLASS_LABELS.length),
@@ -184,7 +248,7 @@ export function getMetricClass(value: number | null, thresholds: readonly number
 
 export function getPaletteColor(value: number, thresholds: readonly number[] = VALUE_THRESHOLDS): string {
   const safeValue = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
-  const safeThresholds = thresholds.length > 0 ? thresholds : VALUE_THRESHOLDS;
+  const safeThresholds = normalizeMetricThresholds(thresholds);
   if (safeValue < safeThresholds[0]) return VALUE_PALETTE[0];
 
   for (let index = 0; index < safeThresholds.length - 1; index += 1) {
@@ -196,8 +260,8 @@ export function getPaletteColor(value: number, thresholds: readonly number[] = V
   return VALUE_PALETTE[VALUE_PALETTE.length - 1];
 }
 
-export function buildQuantileLegendBins(thresholds: readonly number[] = VALUE_THRESHOLDS) {
-  const safeThresholds = thresholds.length > 0 ? thresholds : VALUE_THRESHOLDS;
+export function buildMetricLegendBins(thresholds: readonly number[] = VALUE_THRESHOLDS) {
+  const safeThresholds = normalizeMetricThresholds(thresholds);
 
   return VALUE_PALETTE.map((color, index) => {
     if (index === 0) {
@@ -221,8 +285,11 @@ export function buildQuantileLegendBins(thresholds: readonly number[] = VALUE_TH
   });
 }
 
+export const buildQuantileLegendBins = buildMetricLegendBins;
+
 function formatLegendThreshold(value: number) {
   if (!Number.isFinite(value)) return 'n/a';
+  if (Math.abs(value) < 0.00001) return value.toFixed(6);
   if (Math.abs(value) < 0.001) return value.toFixed(4);
   if (Math.abs(value) < 0.01) return value.toFixed(3);
   return value.toFixed(2);

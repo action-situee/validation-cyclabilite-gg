@@ -9,6 +9,7 @@ import {
   buildColorRampExpression,
   getMetricClass,
   getMetricValue,
+  type BikeIndexScale,
   type BikeMetricKey,
 } from '../config/bikeMetrics';
 import { BASEMAP_OPTIONS, type BasemapMode } from '../config/basemaps';
@@ -23,6 +24,7 @@ interface MapProps {
   metricThresholds: number[];
   basemap: BasemapMode;
   onBasemapChange: (basemap: BasemapMode) => void;
+  onDisplayScaleChange?: (scale: BikeIndexScale) => void;
   onCibleClick: (cible: Cible) => void;
   onObservationClick?: (observation: ObservationLibre) => void;
   onSegmentClick: (segment: BikeSegment) => void;
@@ -43,7 +45,7 @@ type CameraState = {
   pitch: number;
 };
 
-type AnalysisScale = 'segment' | 'carreau200';
+type AnalysisScale = BikeIndexScale;
 
 const DEFAULT_CENTER: [number, number] = [6.1563, 46.1467];
 const DEFAULT_ZOOM = 10.45;
@@ -907,6 +909,7 @@ function MapInner({
   metricThresholds,
   basemap,
   onBasemapChange,
+  onDisplayScaleChange,
   onCibleClick,
   onObservationClick,
   onSegmentClick,
@@ -974,6 +977,10 @@ function MapInner({
   const [corridorMaskTilesAvailable, setCorridorMaskTilesAvailable] = useState(Boolean(CORRIDORS_MASK_PM_TILES_URL));
   const [cameraDebug, setCameraDebug] = useState<CameraState>(cameraStateRef.current);
   const [cursorDebug, setCursorDebug] = useState<{ lng: number; lat: number } | null>(null);
+
+  useEffect(() => {
+    onDisplayScaleChange?.(displayScale);
+  }, [displayScale, onDisplayScaleChange]);
 
   useEffect(() => {
     onCibleClickRef.current = onCibleClick;

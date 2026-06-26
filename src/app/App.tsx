@@ -6,7 +6,13 @@ import { Sidebar } from './components/Sidebar';
 import { ValidationSidebar } from './components/ValidationSidebar';
 import { Button } from './components/ui/button';
 import type { BikeSegment, ObservationLibre, CommentaireGeneral } from './types';
-import { VALUE_THRESHOLDS, type BikeMetricKey } from './config/bikeMetrics';
+import {
+  VALUE_THRESHOLDS,
+  normalizeMetricThresholds,
+  type BikeIndexScale,
+  type BikeMetricKey,
+  type ColorScaleMode,
+} from './config/bikeMetrics';
 import { DEFAULT_BASEMAP, type BasemapMode } from './config/basemaps';
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from './mock-data/faisceaux';
 import { exportGeoJSON, exportCSV } from './utils/export';
@@ -34,6 +40,26 @@ const AdminDashboard = lazy(() =>
 );
 
 type SidebarMode = 'none' | 'left' | 'right' | 'both';
+type QuantileThresholdMap = Partial<Record<BikeIndexScale, Partial<Record<BikeMetricKey, number[]>>>>;
+
+function parseMetricThresholds(metrics: unknown) {
+  if (!metrics || typeof metrics !== 'object') {
+    return {} as Partial<Record<BikeMetricKey, number[]>>;
+  }
+
+  const nextMap = {} as Partial<Record<BikeMetricKey, number[]>>;
+  Object.entries(metrics as Record<string, unknown>).forEach(([key, thresholds]) => {
+    const normalized = normalizeMetricThresholds(
+      Array.isArray(thresholds) ? thresholds : null,
+      [],
+    );
+    if (normalized.length > 0) {
+      nextMap[key as BikeMetricKey] = normalized;
+    }
+  });
+
+  return nextMap;
+}
 
 function AppInner() {
   const {
@@ -54,7 +80,9 @@ function AppInner() {
   const [flyTo, setFlyTo] = useState<{ center: [number, number]; zoom: number } | null>(null);
   const [selectedMetric, setSelectedMetric] = useState<BikeMetricKey>('bike_index');
   const [basemap, setBasemap] = useState<BasemapMode>(DEFAULT_BASEMAP);
-  const [quantileMap, setQuantileMap] = useState<Partial<Record<BikeMetricKey, number[]>>>({});
+  const [colorScaleMode, setColorScaleMode] = useState<ColorScaleMode>('quantile');
+  const [activeIndexScale, setActiveIndexScale] = useState<BikeIndexScale>('carreau200');
+  const [quantileMap, setQuantileMap] = useState<QuantileThresholdMap>({});
 
   // Faisceau visibility (délimitations)
   const [showFaisceaux, setShowFaisceaux] = useState(true);
@@ -72,19 +100,18 @@ function AppInner() {
       .then((response) => (response.ok ? response.json() : null))
       .then((payload) => {
         if (cancelled || !payload || typeof payload !== 'object') return;
-        const metrics = payload.metrics && typeof payload.metrics === 'object'
-          ? payload.metrics
-          : payload;
 
-        const nextQuantileMap = {} as Partial<Record<BikeMetricKey, number[]>>;
-        (Object.keys(metrics) as BikeMetricKey[]).forEach((key) => {
-          const thresholds = metrics[key];
-          if (Array.isArray(thresholds) && thresholds.length > 0) {
-            nextQuantileMap[key] = thresholds.map((value) => Number(value));
-          }
+        const layers = 'layers' in payload && payload.layers && typeof payload.layers === 'object'
+          ? payload.layers as Record<string, { metrics?: unknown }>
+          : null;
+        const legacyMetrics = 'metrics' in payload ? payload.metrics : payload;
+        const segmentThresholds = parseMetricThresholds(layers?.segment?.metrics || legacyMetrics);
+        const carreauThresholds = parseMetricThresholds(layers?.carreau200?.metrics);
+
+        setQuantileMap({
+          segment: segmentThresholds,
+          carreau200: Object.keys(carreauThresholds).length > 0 ? carreauThresholds : segmentThresholds,
         });
-
-        setQuantileMap(nextQuantileMap);
       })
       .catch(() => {
         if (!cancelled) {
@@ -261,9 +288,17 @@ function AppInner() {
   }, [observations]);
 
   const activeThresholds = useMemo(() => {
-    const thresholds = quantileMap[selectedMetric];
+    if (colorScaleMode === 'linear') {
+      return [...VALUE_THRESHOLDS];
+    }
+
+    const thresholds =
+      quantileMap[activeIndexScale]?.[selectedMetric] ||
+      quantileMap.segment?.[selectedMetric] ||
+      quantileMap.carreau200?.[selectedMetric];
+
     return Array.isArray(thresholds) && thresholds.length > 0 ? thresholds : [...VALUE_THRESHOLDS];
-  }, [quantileMap, selectedMetric]);
+  }, [activeIndexScale, colorScaleMode, quantileMap, selectedMetric]);
 
   const currentSelectedObservation = useMemo(() => {
     if (!selectedObservation) return null;
@@ -316,6 +351,9 @@ function AppInner() {
     hoveredSegment: hoveredSegment || selectedSegment,
     hoveredSegmentSource: hoveredSegment ? 'hover' : selectedSegment ? 'selected' : 'none',
     activeThresholds,
+    colorScaleMode,
+    onColorScaleModeChange: setColorScaleMode,
+    activeIndexScale,
   };
 
   const leftSidebarProps = {
@@ -481,6 +519,7 @@ function AppInner() {
               metricThresholds={activeThresholds}
               basemap={basemap}
               onBasemapChange={setBasemap}
+              onDisplayScaleChange={setActiveIndexScale}
               onCibleClick={() => {}}
               onObservationClick={handleObservationClick}
               onSegmentClick={handleSegmentClick}

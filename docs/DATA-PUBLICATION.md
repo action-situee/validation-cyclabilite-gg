@@ -16,6 +16,25 @@ Le brut reste dans l'atlas `copie-atlas-marchabilite-cyclabilite/` puis passe pa
 - `bike_agglo_carreau200.pmtiles`
 - `bike-metric-quantiles.json`
 
+Les scores publies doivent rester inchanges et normalises entre 0 et 1. Les seuils couleur ne servent qu'a la visualisation:
+
+- mode lineaire: seuils fixes `0.1, 0.2, ..., 1.0`;
+- mode quantile: seuils calcules sur les valeurs numeriques valides, en ignorant les valeurs non numeriques ou hors `[0, 1]`.
+
+Le manifeste `bike-metric-quantiles.json` conserve `metrics` a la racine pour compatibilite et peut aussi exposer des seuils par echelle:
+
+```json
+{
+  "metrics": { "bike_index": [0.3023, 0.3304, 0.3538, 0.3734, 0.4008, 0.4186, 0.4318, 0.4502, 0.4767, 0.504] },
+  "layers": {
+    "segment": { "metrics": { "bike_index": [0.3023, 0.3304, 0.3538, 0.3734, 0.4008, 0.4186, 0.4318, 0.4502, 0.4767, 0.504] } },
+    "carreau200": { "metrics": { "bike_index": [0.313805, 0.34431, 0.362867, 0.384963, 0.406012, 0.419667, 0.430277, 0.442676, 0.464901, 0.48597] } }
+  }
+}
+```
+
+En production, la carte, la legende et les classes de consultation utilisent toujours le meme tableau de seuils actif.
+
 ### 2. Faisceaux
 
 Format: GeoJSON `Polygon` ou `MultiPolygon`.
@@ -90,7 +109,7 @@ Le script lit les sorties atlas preparees et regenere:
 
 - `public/data/atlas/bike-segments.geojson`
 - `public/data/atlas/bike-segments-summary.json`
-- `public/data/atlas/bike-metric-quantiles.json`
+- `public/data/atlas/bike-metric-quantiles.json`, avec seuils quantiles strictement croissants par metrique et par echelle disponible
 
 ## Variables utiles
 

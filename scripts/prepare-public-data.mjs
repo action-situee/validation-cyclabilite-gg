@@ -27,6 +27,8 @@ const atlasPaths = {
   ),
   sourcePmtiles: '/tiles/bike_agglo_segment.pmtiles',
   sourcePmtilesFile: path.join(repoRoot, 'public', 'tiles', 'bike_agglo_segment.pmtiles'),
+  sourceCarreau200Pmtiles: '/tiles/bike_agglo_carreau200.pmtiles',
+  sourceCarreau200PmtilesFile: path.join(repoRoot, 'public', 'tiles', 'bike_agglo_carreau200.pmtiles'),
   outputSegments: path.join(dataDirs.atlas, 'bike-segments.geojson'),
   outputSummary: path.join(dataDirs.atlas, 'bike-segments-summary.json'),
   outputQuantiles: path.join(dataDirs.atlas, 'bike-metric-quantiles.json'),
@@ -44,6 +46,21 @@ const quantileMetricFields = [
   'Classe_infrastructure',
   'Classe_securite',
 ];
+
+const quantileScales = {
+  segment: {
+    sourceLayer: 'bikenet',
+    sourcePmtiles: atlasPaths.sourcePmtiles,
+    sourcePmtilesFile: atlasPaths.sourcePmtilesFile,
+  },
+  carreau200: {
+    sourceLayer: 'carreau200',
+    sourcePmtiles: atlasPaths.sourceCarreau200Pmtiles,
+    sourcePmtilesFile: atlasPaths.sourceCarreau200PmtilesFile,
+  },
+};
+
+const THRESHOLD_EPSILON = 1e-6;
 
 const corridors = [
   {
@@ -223,9 +240,51 @@ function classifyBikeIndex(value) {
   return 'tres_bon';
 }
 
+function clampUnit(value) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function ensureStrictlyIncreasingUnitThresholds(values) {
+  if (!Array.isArray(values) || values.length === 0) return [];
+
+  const thresholds = values.map(clampUnit).sort((a, b) => a - b);
+
+  for (let index = 1; index < thresholds.length; index += 1) {
+    if (thresholds[index] <= thresholds[index - 1]) {
+      thresholds[index] = thresholds[index - 1] + THRESHOLD_EPSILON;
+    }
+  }
+
+  if (thresholds[thresholds.length - 1] > 1) {
+    thresholds[thresholds.length - 1] = 1;
+    for (let index = thresholds.length - 2; index >= 0; index -= 1) {
+      if (thresholds[index] >= thresholds[index + 1]) {
+        thresholds[index] = thresholds[index + 1] - THRESHOLD_EPSILON;
+      }
+    }
+  }
+
+  if (thresholds[0] < 0) {
+    thresholds[0] = 0;
+    for (let index = 1; index < thresholds.length; index += 1) {
+      if (thresholds[index] <= thresholds[index - 1]) {
+        thresholds[index] = thresholds[index - 1] + THRESHOLD_EPSILON;
+      }
+    }
+  }
+
+  return thresholds.map((value) => Number(clampUnit(value).toFixed(6)));
+}
+
 function computeQuantileThresholds(values, thresholdCount = 10) {
-  if (!Array.isArray(values) || values.length < thresholdCount + 1) return [];
-  const sorted = [...values].sort((a, b) => a - b);
+  const numericValues = Array.isArray(values)
+    ? values
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value) && value >= 0 && value <= 1)
+    : [];
+
+  if (numericValues.length < thresholdCount + 1) return [];
+  const sorted = [...numericValues].sort((a, b) => a - b);
   const thresholds = [];
   const bucketCount = thresholdCount + 1;
 
@@ -238,13 +297,7 @@ function computeQuantileThresholds(values, thresholdCount = 10) {
     thresholds.push(Number(quantileValue.toFixed(6)));
   }
 
-  for (let i = 1; i < thresholds.length; i += 1) {
-    if (thresholds[i] <= thresholds[i - 1]) {
-      thresholds[i] = Number((thresholds[i - 1] + 1e-6).toFixed(6));
-    }
-  }
-
-  return thresholds;
+  return ensureStrictlyIncreasingUnitThresholds(thresholds);
 }
 
 class LocalPmtilesSource {
@@ -316,6 +369,7 @@ async function computeQuantilesFromPmtiles(filePath, sourceLayer = 'bikenet') {
   const seenFeatureIds = new Set();
   let parsedTileCount = 0;
   let skippedDuplicateFeatures = 0;
+  let resolvedSourceLayer = null;
 
   for (const entry of entries) {
     const [z, x, y] = tileIdToZxy(entry.tileId);
@@ -326,8 +380,12 @@ async function computeQuantilesFromPmtiles(filePath, sourceLayer = 'bikenet') {
 
     parsedTileCount += 1;
     const vectorTile = new VectorTile(new Protobuf(new Uint8Array(tile.data)));
-    const layer = vectorTile.layers[sourceLayer] || vectorTile.layers[Object.keys(vectorTile.layers)[0]];
+    const layerName = vectorTile.layers[sourceLayer] ? sourceLayer : Object.keys(vectorTile.layers)[0];
+    const layer = vectorTile.layers[layerName];
     if (!layer) continue;
+    if (!resolvedSourceLayer) {
+      resolvedSourceLayer = layerName;
+    }
 
     for (let index = 0; index < layer.length; index += 1) {
       const properties = layer.feature(index).properties || {};
@@ -348,7 +406,7 @@ async function computeQuantilesFromPmtiles(filePath, sourceLayer = 'bikenet') {
   }
 
   return {
-    source_layer: sourceLayer,
+    source_layer: resolvedSourceLayer || sourceLayer,
     source_zoom: header.maxZoom,
     parsed_tile_count: parsedTileCount,
     feature_count: seenFeatureIds.size,
@@ -556,30 +614,66 @@ async function prepareBikeSegments() {
     by_corridor: summary,
   });
 
-  let pmtilesQuantiles = null;
-  try {
-    pmtilesQuantiles = await computeQuantilesFromPmtiles(atlasPaths.sourcePmtilesFile);
-  } catch (error) {
-    console.warn(
-      `[prepare-public-data] Quantiles PMTiles non generes (${error instanceof Error ? error.message : String(error)}). Repli sur le NDJSON.`,
-    );
+  const pmtilesQuantilesByScale = {};
+  for (const [scale, config] of Object.entries(quantileScales)) {
+    try {
+      pmtilesQuantilesByScale[scale] = await computeQuantilesFromPmtiles(
+        config.sourcePmtilesFile,
+        config.sourceLayer,
+      );
+    } catch (error) {
+      console.warn(
+        `[prepare-public-data] Quantiles PMTiles ${scale} non generes (${error instanceof Error ? error.message : String(error)}).`,
+      );
+      pmtilesQuantilesByScale[scale] = null;
+    }
   }
+
+  const ndjsonMetrics = Object.fromEntries(
+    quantileMetricFields.map((field) => [field, computeQuantileThresholds(quantileBuckets[field])]),
+  );
+  const segmentMetrics = Object.fromEntries(
+    quantileMetricFields.map((field) => [
+      field,
+      pmtilesQuantilesByScale.segment?.metrics[field] || ndjsonMetrics[field],
+    ]),
+  );
+  const carreau200Metrics = Object.fromEntries(
+    quantileMetricFields.map((field) => [
+      field,
+      pmtilesQuantilesByScale.carreau200?.metrics[field] || segmentMetrics[field],
+    ]),
+  );
+
+  const buildLayerQuantilePayload = (scale, metrics) => {
+    const config = quantileScales[scale];
+    const pmtilesQuantiles = pmtilesQuantilesByScale[scale];
+
+    return {
+      source_pmtiles: path.relative(repoRoot, config.sourcePmtilesFile),
+      source_layer: pmtilesQuantiles?.source_layer || config.sourceLayer,
+      source_zoom: pmtilesQuantiles?.source_zoom,
+      parsed_tile_count: pmtilesQuantiles?.parsed_tile_count,
+      feature_count: pmtilesQuantiles?.feature_count,
+      skipped_duplicate_features: pmtilesQuantiles?.skipped_duplicate_features,
+      metrics,
+    };
+  };
 
   await writeJson(atlasPaths.outputQuantiles, {
     generated_at: new Date().toISOString(),
     source_ndjson: path.relative(repoRoot, atlasPaths.sourceNdjson),
-    source_pmtiles: pmtilesQuantiles ? path.relative(repoRoot, atlasPaths.sourcePmtilesFile) : undefined,
-    source_layer: pmtilesQuantiles?.source_layer,
-    source_zoom: pmtilesQuantiles?.source_zoom,
-    parsed_tile_count: pmtilesQuantiles?.parsed_tile_count,
-    feature_count: pmtilesQuantiles?.feature_count,
-    skipped_duplicate_features: pmtilesQuantiles?.skipped_duplicate_features,
-    metrics: Object.fromEntries(
-      quantileMetricFields.map((field) => [
-        field,
-        pmtilesQuantiles?.metrics[field] || computeQuantileThresholds(quantileBuckets[field]),
-      ]),
-    ),
+    source_pmtiles: path.relative(repoRoot, atlasPaths.sourcePmtilesFile),
+    source_layer: pmtilesQuantilesByScale.segment?.source_layer || quantileScales.segment.sourceLayer,
+    source_zoom: pmtilesQuantilesByScale.segment?.source_zoom,
+    parsed_tile_count: pmtilesQuantilesByScale.segment?.parsed_tile_count,
+    feature_count: pmtilesQuantilesByScale.segment?.feature_count,
+    skipped_duplicate_features: pmtilesQuantilesByScale.segment?.skipped_duplicate_features,
+    metrics: segmentMetrics,
+    layers: {
+      segment: buildLayerQuantilePayload('segment', segmentMetrics),
+      carreau200: buildLayerQuantilePayload('carreau200', carreau200Metrics),
+    },
   });
 }
 
